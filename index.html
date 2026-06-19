@@ -2051,7 +2051,7 @@
       btn.classList.add('active');
       if (panelId === 'weather') {
         if (!wxState.loaded) wxLoadLocation(wxState.lat, wxState.lon, wxState.name);
-        if (!radarState.loaded) radarInit();
+        if (!radarState.loaded) { try { radarInit(); } catch(e) {} }
       }
       if (panelId === 'maps') {
         setTimeout(() => renderMapDay(currentMapDay), 100);
@@ -2636,7 +2636,9 @@
       document.querySelectorAll('.maps-day-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentMapDay = day;
-      renderMapDay(day);
+      try { renderMapDay(day); } catch(e) { 
+        document.getElementById('map-stop-list').innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px;">🗺️ Map requires internet connection.</div>';
+      }
     }
 
     function renderMapDay(day) {
@@ -2666,6 +2668,7 @@
 
       // Init or update Leaflet map
       if (!leafletMap) {
+        if (typeof L === 'undefined') throw new Error('Leaflet not loaded');
         leafletMap = L.map('leaflet-map', { zoomControl: true, attributionControl: false });
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 18, opacity: 1
