@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>🏯 Gyeongju – Vikend Izlet</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    /* ─── TOKENS ─── */
+    :root {
+      --bg:        #0D1117;
+      --surface:   #141B24;
+      --card:      #1A2332;
+      --card-alt:  #1E293B;
+      --border:    #253348;
+      --accent:    #7EB8D4;
+      --accent2:   #A8C5D8;
+      --accent-dim:#3D5A6B;
+      --text:      #E8EDF2;
+      --muted:     #7A8FA3;
+      --warn-red:  #FF5B5B;
+      --warn-yellow: #FFD166;
+      --warn-green:  #4CC9A0;
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+    }
+
+    /* ─── RESET ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ─── HERO HEADER ─── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(175deg, #0B1929 0%, #112035 50%, #0D1117 100%);
+      padding: 52px 20px 40px;
+      text-align: center;
+    }
+
+    /* Rain shimmer — signature element */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(
+          90deg,
+          transparent 0px, transparent 18px,
+          rgba(126,184,212,0.04) 18px, rgba(126,184,212,0.04) 19px
+        ),
+        repeating-linear-gradient(
+          170deg,
+          transparent 0px, transparent 40px,
+          rgba(126,184,212,0.06) 40px, rgba(126,184,212,0.06) 41px
+        );
+      animation: rain 2.8s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes rain {
+      0%   { background-position: 0 -80px, 0 -120px; }
+      100% { background-position: 0 200px, 0 200px; }
+    }
+
+    .hero-flag {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .hero h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      position: relative;
+      line-height: 1.1;
+    }
+
+    .hero h1 span {
+      display: block;
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--accent2);
+      letter-spacing: 1px;
+      margin-top: 6px;
+    }
+
+    .hero-dates {
+      margin-top: 18px;
+      display: inline-flex;
+      gap: 8px;
+      background: rgba(126,184,212,0.08);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 7px 16px;
+      font-size: 13px;
+      color: var(--accent2);
+      position: relative;
+    }
+
+    /* ─── TAB NAV ─── */
+    .tab-nav {
+      display: flex;
+      gap: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 13px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-align: center;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ─── SECTION PANELS ─── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ─── SECTION HEADINGS ─── */
+    .section-heading {
+      padding: 24px 16px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+    }
+
+    /* ─── ACCORDION DAYS ─── */
+    .day-list { padding: 0 12px 8px; display: flex; flex-direction: column; gap: 8px; }
+
+    .day-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .day-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+
+    .day-trigger:active { background: rgba(255,255,255,0.03); }
+
+    .day-icon {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .day-meta { flex: 1; min-width: 0; }
+
+    .day-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .day-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .day-chevron {
+      font-size: 12px;
+      color: var(--muted);
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+      flex-shrink: 0;
+    }
+
+    .day-item.open .day-chevron { transform: rotate(180deg); }
+
+    .day-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(.4,0,.2,1);
+    }
+
+    .day-item.open .day-body { max-height: 2400px; }
+
+    .day-content {
+      padding: 0 16px 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    .event-list { display: flex; flex-direction: column; gap: 0; padding-top: 14px; }
+
+    .event {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 18px;
+      position: relative;
+    }
+
+    .event:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 28px;
+      bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .event-dot {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    .event-info { flex: 1; padding-top: 4px; }
+
+    .event-time {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .event-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .event-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 3px;
+      line-height: 1.45;
+    }
+
+    .rain-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(126,184,212,0.1);
+      border: 1px solid rgba(126,184,212,0.2);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: var(--accent2);
+      margin-top: 8px;
+    }
+
+    /* ─── LOCATION BUTTONS ─── */
+    .locations { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+
+    .loc-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 16px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+      transition: border-color 0.2s, background 0.15s;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .loc-btn:active {
+      background: var(--card-alt);
+      border-color: var(--accent-dim);
+    }
+
+    .loc-emoji {
+      font-size: 32px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .loc-info { flex: 1; min-width: 0; }
+
+    .loc-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .loc-tag {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .loc-arrow {
+      font-size: 20px;
+      color: var(--accent);
+    }
+
+    /* ─── CRASH COURSE ─── */
+    .crash-list {
+      padding: 0 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .crash-card {
+      background: var(--card);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .crash-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px 12px;
+    }
+
+    .crash-icon { font-size: 22px; flex-shrink: 0; }
+
+    .crash-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
+    .crash-body {
+      padding: 0 16px 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .crash-body strong { color: var(--text); font-weight: 600; }
+
+    .crash-body .highlight {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .red-card { border-left: 3px solid var(--warn-red); }
+    .red-card .crash-header { background: rgba(255,91,91,0.08); }
+    .red-card .crash-title { color: var(--warn-red); }
+    .red-card .highlight { background: rgba(255,91,91,0.15); color: var(--warn-red); }
+
+    .green-card { border-left: 3px solid var(--warn-green); }
+    .green-card .crash-header { background: rgba(76,201,160,0.08); }
+    .green-card .crash-title { color: var(--warn-green); }
+    .green-card .highlight { background: rgba(76,201,160,0.15); color: var(--warn-green); }
+
+    .yellow-card { border-left: 3px solid var(--warn-yellow); }
+    .yellow-card .crash-header { background: rgba(255,209,102,0.08); }
+    .yellow-card .crash-title { color: var(--warn-yellow); }
+    .yellow-card .highlight { background: rgba(255,209,102,0.15); color: var(--warn-yellow); }
+
+    .blue-card { border-left: 3px solid var(--accent); }
+    .blue-card .crash-header { background: rgba(126,184,212,0.08); }
+    .blue-card .crash-title { color: var(--accent); }
+    .blue-card .highlight { background: rgba(126,184,212,0.15); color: var(--accent); }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      text-align: center;
+      padding: 28px 16px 0;
+      font-size: 12px;
+      color: var(--accent-dim);
+    }
+
+    /* ─── WEATHER WIDGET ─── */
+    .weather-strip {
+      margin: 0 12px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .weather-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .weather-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+    }
+
+    .weather-refresh {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--accent);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+
+    .weather-refresh:active { background: rgba(126,184,212,0.1); }
+
+    .weather-days {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .weather-day {
+      padding: 12px 6px 14px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+
+    .weather-day:last-child { border-right: none; }
+
+    .weather-day.today { background: rgba(126,184,212,0.05); }
+
+    .wd-name {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .wd-icon { font-size: 22px; line-height: 1; margin-bottom: 6px; }
+
+    .wd-temp {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .wd-temp-low {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .wd-rain {
+      font-size: 10px;
+      color: var(--accent2);
+      margin-top: 5px;
+      font-weight: 600;
+    }
+
+    .wd-wind {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .weather-loading {
+      text-align: center;
+      padding: 24px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .weather-error {
+      text-align: center;
+      padding: 16px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .weather-updated {
+      text-align: right;
+      padding: 6px 14px 8px;
+      font-size: 10px;
+      color: var(--accent-dim);
+      border-top: 1px solid var(--border);
+    }
+
+
+    /* ─── WEATHER DETAIL PANEL ─── */
+    .wx-search-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px 12px 0;
+    }
+    .wx-input {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .wx-input::placeholder { color: var(--muted); }
+    .wx-input:focus { border-color: var(--accent-dim); }
+    .wx-btn {
+      background: var(--accent-dim);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+    .wx-btn:active { background: var(--accent); }
+    .wx-btn-gps {
+      background: rgba(76,201,160,0.15);
+      border: 1px solid rgba(76,201,160,0.3);
+      border-radius: var(--radius-sm);
+      color: var(--warn-green);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 12px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+    .wx-btn-gps:active { background: rgba(76,201,160,0.3); }
+
+    .wx-location-name {
+      padding: 14px 12px 4px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .wx-location-sub {
+      padding: 0 12px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* current conditions strip */
+    .wx-current {
+      margin: 0 12px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .wx-cur-icon { font-size: 44px; line-height: 1; }
+    .wx-cur-temp { font-size: 36px; font-weight: 800; color: var(--text); line-height: 1; }
+    .wx-cur-desc { font-size: 13px; color: var(--accent2); margin-top: 3px; }
+    .wx-cur-meta { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+
+    /* day selector tabs */
+    .wx-day-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 0 12px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .wx-day-tabs::-webkit-scrollbar { display: none; }
+    .wx-day-tab {
+      flex-shrink: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .wx-day-tab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    /* hourly scroll container */
+    .wx-hourly-wrap {
+      margin: 0 12px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .wx-hourly-title {
+      padding: 10px 14px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .wx-hourly-scroll {
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 8px 12px;
+    }
+    .wx-hourly-scroll::-webkit-scrollbar { display: none; }
+    .wx-hourly-inner {
+      display: flex;
+      gap: 4px;
+      padding-top: 10px;
+      min-width: max-content;
+    }
+    .wx-hour {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 52px;
+      gap: 3px;
+      padding: 8px 4px;
+      border-radius: 10px;
+      transition: background 0.15s;
+    }
+    .wx-hour.now {
+      background: rgba(126,184,212,0.12);
+      border: 1px solid rgba(126,184,212,0.2);
+    }
+    .wx-hour-time { font-size: 10px; color: var(--muted); font-weight: 600; }
+    .wx-hour-icon { font-size: 18px; line-height: 1; }
+    .wx-hour-temp { font-size: 13px; font-weight: 700; color: var(--text); }
+    .wx-hour-rain { font-size: 10px; color: var(--accent2); font-weight: 600; }
+    .wx-hour-mm   { font-size: 10px; color: var(--muted); }
+
+    /* rain bar chart */
+    .wx-rain-chart {
+      margin: 0 12px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .wx-rain-chart-title {
+      padding: 10px 14px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .wx-rain-bars {
+      padding: 12px 14px 10px;
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 80px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .wx-rain-bars::-webkit-scrollbar { display: none; }
+    .wx-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+      min-width: 20px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .wx-bar {
+      width: 100%;
+      border-radius: 3px 3px 0 0;
+      min-height: 2px;
+      transition: height 0.3s;
+    }
+    .wx-bar-lbl { font-size: 8px; color: var(--muted); white-space: nowrap; }
+
+    .wx-updated {
+      text-align: right;
+      padding: 6px 12px 10px;
+      font-size: 10px;
+      color: var(--accent-dim);
+    }
+
+    .wx-loading {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .wx-error {
+      text-align: center;
+      padding: 30px 16px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ─── UTILITY ─── */
+    .px { padding-left: 12px; padding-right: 12px; }
+
+    @media (min-width: 500px) {
+      .day-list, .locations, .crash-list { padding-left: 20px; padding-right: 20px; }
+      .px { padding-left: 20px; padding-right: 20px; }
+      body { max-width: 480px; margin: 0 auto; }
+    }
+
+    /* ─── RADAR MAP ─── */
+    .radar-wrap {
+      margin: 0 12px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .radar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .radar-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+    }
+    .radar-controls { display: flex; gap: 6px; align-items: center; }
+    .radar-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--accent);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .radar-btn:active { background: rgba(126,184,212,0.1); }
+    .radar-canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 0.7;
+      background: #0a1a2e;
+      overflow: hidden;
+    }
+    #radar-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .radar-overlay-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-shadow: 0 0 6px rgba(126,184,212,0.8);
+    }
+    .radar-time-label {
+      position: absolute;
+      bottom: 6px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .radar-legend {
+      display: flex;
+      gap: 6px;
+      padding: 8px 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      border-top: 1px solid var(--border);
+    }
+    .radar-legend-title { font-size: 10px; color: var(--muted); margin-right: 4px; }
+    .radar-legend-item { display: flex; align-items: center; gap: 3px; font-size: 10px; color: var(--muted); }
+    .radar-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+    .radar-status {
+      text-align: center;
+      padding: 30px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .radar-frame-bar {
+      display: flex;
+      gap: 2px;
+      padding: 6px 14px 8px;
+      align-items: center;
+    }
+    .radar-frame-tick {
+      flex: 1;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      transition: background 0.2s;
+    }
+    .radar-frame-tick.active { background: var(--accent); }
+
+
+    /* ─── MAPS PANEL ─── */
+    .maps-day-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 14px 12px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .maps-day-tabs::-webkit-scrollbar { display: none; }
+    .maps-day-tab {
+      flex-shrink: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 16px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .maps-day-tab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .map-view { display: none; padding: 0 12px 12px; }
+    .map-view.active { display: block; }
+    .map-frame {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .map-frame-header {
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+    }
+    .map-stops {
+      padding: 8px 0 4px;
+    }
+    .map-stop {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      padding: 0 14px;
+      position: relative;
+    }
+    .map-stop-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .map-stop-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--text);
+      font-weight: 700;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+    .map-stop-line {
+      width: 2px;
+      flex: 1;
+      min-height: 16px;
+      background: var(--border);
+      margin: 2px 0;
+    }
+    .map-stop-right {
+      flex: 1;
+      padding: 2px 0 12px 10px;
+    }
+    .map-stop-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .map-stop-detail {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .map-travel {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px 0 42px;
+      margin: -6px 0 2px;
+    }
+    .map-travel-line {
+      flex: 1;
+      height: 1px;
+      border-top: 1px dashed var(--border);
+    }
+    .map-travel-time {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 700;
+      white-space: nowrap;
+      background: var(--card);
+      padding: 1px 6px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+    }
+    .map-total {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .map-total strong { color: var(--accent2); }
+
+
+    /* ─── LEAFLET DARK THEME ─── */
+    .leaflet-container { background: #0a1a2e !important; }
+    .leaflet-tile { filter: brightness(0.5) saturate(0.4) hue-rotate(190deg); }
+    .leaflet-popup-content-wrapper {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .leaflet-popup-tip { background: var(--card); }
+    .leaflet-popup-content { margin: 10px 14px; }
+    .lf-popup-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .lf-popup-time { font-size: 11px; color: var(--accent2); margin-bottom: 6px; }
+    .lf-popup-btn {
+      display: inline-block;
+      background: var(--accent-dim);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 100px;
+      text-decoration: none;
+      margin-top: 2px;
+    }
+    .lf-travel-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      margin-bottom: 4px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .lf-travel-card strong { color: var(--accent); font-size: 11px; }
+    .lf-stop-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .lf-stop-card:active { background: var(--card-alt); }
+    .lf-stop-icon { font-size: 22px; flex-shrink: 0; }
+    .lf-stop-info { flex: 1; min-width: 0; }
+    .lf-stop-name { font-size: 13px; font-weight: 600; }
+    .lf-stop-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .lf-stop-arrow { color: var(--accent); font-size: 16px; }
+    .lf-day-summary {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      background: rgba(126,184,212,0.08);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .lf-day-summary strong { color: var(--accent2); }
+    .leaflet-control-attribution { display: none; }
+    .leaflet-control-zoom a {
+      background: var(--card) !important;
+      color: var(--text) !important;
+      border-color: var(--border) !important;
+    }
+
+
+    /* ─── LANGUAGE SWITCHER ─── */
+    .lang-switcher {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 14px;
+      position: relative;
+    }
+    .lang-btn {
+      background: rgba(126,184,212,0.1);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 14px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .lang-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- ── HERO ── -->
+  <header class="hero">
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('ko')">한국어</button>
+      <button class="lang-btn" onclick="setLang('sl')">SLO</button>
+    </div>
+    <p class="hero-flag"><span class="t" data-sl="🇰🇷 Republika Koreja" data-en="🇰🇷 Republic of Korea" data-ko="🇰🇷 대한민국">🇰🇷 Republika Koreja</span></p>
+    <h1>경주 Gyeongju<span><span class="t" data-sl="Vikend izlet • Junij 2026" data-en="Weekend trip • June 2026" data-ko="주말 여행 • 2026년 6월">Vikend izlet • Junij 2026</span></span></h1>
+    <div class="hero-dates"><span class="t" data-sl="📅 Pet 19. – Pon 22. junij 2026" data-en="📅 Fri 19 – Mon 22 June 2026" data-ko="📅 6월 19일(금) – 22일(월) 2026">📅 Pet 19. – Pon 22. junij 2026</span></div>
+  </header>
+
+  <!-- ── TAB NAV ── -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('itinerary', this)"><span class="t" data-sl="📅 Itinerar" data-en="📅 Itinerary" data-ko="📅 일정">📅 Itinerar</span></button>
+    <button class="tab-btn" onclick="switchTab('locations', this)"><span class="t" data-sl="📍 Lokacije" data-en="📍 Locations" data-ko="📍 위치">📍 Lokacije</span></button>
+    <button class="tab-btn" onclick="switchTab('driving', this)"><span class="t" data-sl="🛑 Vožnja" data-en="🛑 Driving" data-ko="🛑 운전">🛑 Vožnja</span></button>
+    <button class="tab-btn" onclick="switchTab('weather', this)"><span class="t" data-sl="🌦️ Vreme" data-en="🌦️ Weather" data-ko="🌦️ 날씨">🌦️ Vreme</span></button>
+    <button class="tab-btn" onclick="switchTab('maps', this)"><span class="t" data-sl="🗺️ Mape" data-en="🗺️ Maps" data-ko="🗺️ 지도">🗺️ Mape</span></button>
+  </nav>
+
+  <!-- ═══════════════════════════════════
+       PANEL 1 — ITINERAR
+  ═══════════════════════════════════ -->
+  <section class="panel active" id="panel-itinerary">
+
+    <p class="section-heading px"><span class="t" data-sl="Program po dnevih" data-en="Day by Day" data-ko="일정">Program po dnevih</span></p>
+
+    <!-- ── WEATHER WIDGET ── -->
+    <div class="weather-strip" id="weather-widget">
+      <div class="weather-header">
+        <span class="weather-title"><span class="t" data-sl="🌤️ Vreme Gyeongju" data-en="🌤️ Gyeongju Weather" data-ko="🌤️ 경주 날씨">🌤️ Vreme Gyeongju</span></span>
+        <button class="weather-refresh" onclick="fetchWeather()"><span class="t" data-sl="↻ Osveži" data-en="↻ Refresh" data-ko="↻ 새로고침">↻ Osveži</span></button>
+      </div>
+      <div id="weather-body">
+        <div class="weather-loading">⏳ Nalaganje vremena…</div>
+      </div>
+    </div>
+
+    <div class="day-list">
+
+      <!-- ── PETEK ── -->
+      <div class="day-item" id="day-fri">
+        <button class="day-trigger" onclick="toggleDay('day-fri')">
+          <span class="day-icon">⛅</span>
+          <div class="day-meta">
+            <div class="day-label"><span class="t" data-sl="Petek 19.6. — Prihod" data-en="Friday 19.6. — Arrival" data-ko="금요일 19.6. — 도착">Petek 19.6. — Prihod</span></div>
+            <div class="day-sub"><span class="t" data-sl="KTX 10:58 · Peš po centru · Dež možen zvečer" data-en="KTX 10:58 · Walking the city center · Rain possible in the evening" data-ko="KTX 10:58 · 도심 도보 · 저녁 비 가능">KTX 10:58 · Peš po centru · Dež možen zvečer</span></div>
+          </div>
+          <span class="day-chevron">▼</span>
+        </button>
+        <div class="day-body">
+          <div class="day-content">
+            <div class="rain-badge"><span class="t" data-sl="⛅ Dopoldne suho · dež možen šele zvečer — odlično za hojo!" data-en="⛅ Dry in the morning · rain possible only in the evening — great for walking!" data-ko="⛅ 오전 맑음 · 저녁에 비 가능 — 도보 완벽!">⛅ Dopoldne suho · dež možen šele zvečer — odlično za hojo!</span></div>
+            <div class="event-list">
+
+              <div class="event">
+                <div class="event-dot">🚆</div>
+                <div class="event-info">
+                  <div class="event-time">08:46 → 10:58</div>
+                  <div class="event-title"><span class="t" data-sl="KTX 121 — Suwon → Gyeongju" data-en="KTX 121 — Suwon → Gyeongju" data-ko="KTX 121 — 수원 → 경주">KTX 121 — Suwon → Gyeongju</span></div>
+                  <div class="event-desc">Odhod iz Suwona 08:46 · Prispeta v Singyeongju <strong style="color:var(--accent)">10:58</strong> · 2h 12min · taksi do hotela ~15 min / ~10.000 KRW</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏨</div>
+                <div class="event-info">
+                  <div class="event-time">~11:30</div>
+                  <div class="event-title"><span class="t" data-sl="Aventa Hotel — odlaganje prtljage" data-en="Aventa Hotel — drop off luggage" data-ko="아벤타 호텔 — 짐 맡기기">Aventa Hotel — odlaganje prtljage</span></div>
+                  <div class="event-desc">28, Taejong-ro 685beon-gil · Check-in od 15:00 — prtljago pustita na recepciji.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🍜</div>
+                <div class="event-info">
+                  <div class="event-time">12:00 – 13:00</div>
+                  <div class="event-title"><span class="t" data-sl="Kosilo blizu hotela" data-en="Lunch near the hotel" data-ko="호텔 근처 점심">Kosilo blizu hotela</span></div>
+                  <div class="event-desc">Priporočata se Hongsi Hanjungsik tik ob hotelu ali katerakoli restavracija ob Taejong-ro. Napolnita se — čaka vaju 6+ km hoje! 🦵</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">⛰️</div>
+                <div class="event-info">
+                  <div class="event-time">13:00 – 14:30</div>
+                  <div class="event-title">Daureungwon — grobnice 🏔️</div>
+                  <div class="event-desc">🚶 0.9 km od hotela · Vstopnina ~3.000 KRW/os · <strong style="color:var(--warn-green)">Odprto 09:00–22:00</strong> · Tu začneta "Veliko peš zanko".</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🔭</div>
+                <div class="event-info">
+                  <div class="event-time">14:30 – 15:15</div>
+                  <div class="event-title"><span class="t" data-sl="Cheomseongdae — observatorij ⭐" data-en="Cheomseongdae — Observatory ⭐" data-ko="첨성대 — 천문대 ⭐">Cheomseongdae — observatorij ⭐</span></div>
+                  <div class="event-desc"><span class="t" data-sl="🚶 +10 min · 09:00–22:00 · Brezplačno" data-en="🚶 +10 min · 09:00–22:00 · Free" data-ko="🚶 +10분 · 09:00–22:00 · 무료">🚶 +10 min · 09:00–22:00 · Brezplačno</span> · <strong style="color:var(--warn-green)">Odprto 09:00–22:00</strong> · Brezplačno.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🌳</div>
+                <div class="event-info">
+                  <div class="event-time">15:15 – 15:45</div>
+                  <div class="event-title"><span class="t" data-sl="Gyerim gozd & Wolseong razvalina 🌲" data-en="Gyerim Forest & Wolseong Ruins 🌲" data-ko="계림 & 월성 🌲">Gyerim gozd & Wolseong razvalina 🌲</span></div>
+                  <div class="event-desc">🚶 +5 min od Cheomseongdae · Skrivnosten gaj kjer se je rodila dinastija Kim. Brezplačno. Senčno — lep prehod do Gyochona.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏘️</div>
+                <div class="event-info">
+                  <div class="event-time">15:45 – 16:45</div>
+                  <div class="event-title"><span class="t" data-sl="Gyochon Hanok Village 🏯" data-en="Gyochon Hanok Village 🏯" data-ko="교촌 한옥마을 🏯">Gyochon Hanok Village 🏯</span></div>
+                  <div class="event-desc">🚶 +5 min od Gyerima · Tradicionalna korejska vasica z lesenimi hanok hišami — kot stroj za čas. Tu je tudi hiša slavne bogate družine Choi. Brezplačno.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🌉</div>
+                <div class="event-info">
+                  <div class="event-time">16:45 – 17:15</div>
+                  <div class="event-title"><span class="t" data-sl="Most Woljeonggyo 🌉" data-en="Woljeonggyo Bridge 🌉" data-ko="월정교 🌉">Most Woljeonggyo 🌉</span></div>
+                  <div class="event-desc"><span class="t" data-sl="🚶 +2 min od Gyochona · Rekonstruiran leseni most iz dobe Shilla čez reko Namcheon. Ponoči osvetljen — ampak čez dan enako fotogeničen! Tik ob mostu so stepping stones čez reko. 📸" data-en="🚶 +2 min from Gyochon · Reconstructed wooden Silla-era bridge over the Namcheon river. Lit up at night — but equally photogenic by day! Stepping stones right by the bridge. 📸" data-ko="🚶 교촌에서 +2분 · 신라시대 복원 목교 (남천 위). 야간 조명 — 낮에도 포토제닉! 다리 옆 징검다리. 📸">🚶 +2 min od Gyochona · Rekonstruiran leseni most iz dobe Shilla čez reko Namcheon. Ponoči osvetljen — ampak čez dan enako fotogeničen! Tik ob mostu so stepping stones čez reko. 📸</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">☕</div>
+                <div class="event-info">
+                  <div class="event-time">17:15 – 18:00</div>
+                  <div class="event-title"><span class="t" data-sl="Hwangridan-gil — zaslužena kava ☕" data-en="Hwangridan-gil — well-earned coffee ☕" data-ko="황리단길 — 달콤한 커피 ☕">Hwangridan-gil — zaslužena kava ☕</span></div>
+                  <div class="event-desc">🚶 +5 min od Woljeonggya · Estetske kavarne, butiki, street food. Potem nazaj v hotel na check-in — samo 0.8 km od hotela!</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏨</div>
+                <div class="event-info">
+                  <div class="event-time">~17:30</div>
+                  <div class="event-title"><span class="t" data-sl="Check-in — Aventa Hotel" data-en="Check-in — Aventa Hotel" data-ko="체크인 — 아벤타 호텔">Check-in — Aventa Hotel</span></div>
+                  <div class="event-desc">Tuš, počitek. Pripravita se na večer.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🍽️</div>
+                <div class="event-info">
+                  <div class="event-time">18:30 – 19:30</div>
+                  <div class="event-title"><span class="t" data-sl="Večerja v centru" data-en="Dinner in the city center" data-ko="시내 저녁 식사">Večerja v centru</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Lokalne restavracije ob Hwangridan ali Taejong-ro. Priporočata se gyeongju bap (lokalni set menu) ali galbi. 🥢" data-en="Local restaurants along Hwangridan or Taejong-ro. Try gyeongju bap (local set menu) or galbi. 🥢" data-ko="황리단 또는 태종로 인근 식당. 경주밥상 (로컬 세트) 또는 갈비 추천. 🥢">Lokalne restavracije ob Hwangridan ali Taejong-ro. Priporočata se gyeongju bap (lokalni set menu) ali galbi. 🥢</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏛️</div>
+                <div class="event-info">
+                  <div class="event-time">19:30 – 21:00</div>
+                  <div class="event-title"><span class="t" data-sl="Narodni muzej Gyeongju 🎉" data-en="Gyeongju National Museum 🎉" data-ko="국립경주박물관 🎉">Narodni muzej Gyeongju 🎉</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Pod streho — idealno če dežuje zvečer! Vhod brezplačen · <strong style=&quot;color:var(--warn-green)&quot;>Ob petkih odprt do 21:00!</strong> 🎉 Zadnji vstop 20:30." data-en="Indoors — perfect if it rains in the evening! Free entry · <strong style=&quot;color:var(--warn-green)&quot;>Open until 21:00 on Fridays!</strong> 🎉 Last entry 20:30." data-ko="실내 — 저녁 비에 완벽! 무료 입장 · <strong style=&quot;color:var(--warn-green)&quot;>금요일 21:00까지 개방!</strong> 🎉 마지막 입장 20:30.">Pod streho — idealno če dežuje zvečer! Vhod brezplačen · <strong style="color:var(--warn-green)">Ob petkih odprt do 21:00!</strong> 🎉 Zadnji vstop 20:30.</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏮</div>
+                <div class="event-info">
+                  <div class="event-time">21:00+</div>
+                  <div class="event-title"><span class="t" data-sl="<span class="t" data-sl="Donggung Palace & Wolji Pond ✨" data-en="Donggung Palace & Wolji Pond ✨" data-ko="동궁과 월지 ✨">Donggung Palace & Wolji Pond ✨</span> (opcijsko)" data-en="Donggung Palace & Wolji Pond ✨ (optional)" data-ko="동궁과 월지 ✨ (선택)">Donggung Palace & Wolji Pond ✨ (opcijsko)</span></div>
+                  <div class="event-desc"><span class="t" data-sl="1.5 km od hotela · <strong style=&quot;color:var(--warn-green)&quot;>Odprto 09:00–22:00</strong> · Vstopnina 3.000 KRW · Lučke v ribnikih — le če imata še energijo! 😄" data-en="1.5 km from hotel · <strong style=&quot;color:var(--warn-green)&quot;>Open 09:00–22:00</strong> · Entry 3,000 KRW · Lights reflected in ponds — only if you still have energy! 😄" data-ko="호텔에서 1.5km · <strong style=&quot;color:var(--warn-green)&quot;>09:00–22:00 개방</strong> · 입장료 3,000원 · 연못 반영 야경 — 체력 남으면! 😄">1.5 km od hotela · <strong style="color:var(--warn-green)">Odprto 09:00–22:00</strong> · Vstopnina 3.000 KRW · Lučke v ribnikih — le če imata še energijo! 😄</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SOBOTA ── -->
+      <div class="day-item" id="day-sat">
+        <button class="day-trigger" onclick="toggleDay('day-sat')">
+          <span class="day-icon">🚗</span>
+          <div class="day-meta">
+            <div class="day-label"><span class="t" data-sl="Sobota 20.6. — Bulguksa" data-en="Saturday 20.6. — Bulguksa" data-ko="토요일 20.6. — 불국사">Sobota 20.6. — Bulguksa</span></div>
+            <div class="day-sub"><span class="t" data-sl="Bulguksa · Seokguram · Dež cel dan" data-en="Bulguksa · Seokguram · Rain all day" data-ko="불국사 · 석굴암 · 종일 비">Bulguksa · Seokguram · Dež cel dan</span></div>
+          </div>
+          <span class="day-chevron">▼</span>
+        </button>
+        <div class="day-body">
+          <div class="day-content">
+            <div class="rain-badge"><span class="t" data-sl="🌧️ Dežuje ves dan — ampak Bulguksa v dežju je magična! ⛩️" data-en="🌧️ Rain all day — but Bulguksa in the rain is magical! ⛩️" data-ko="🌧️ 종일 비 — 하지만 비 오는 불국사는 정말 아름다워요! ⛩️">🌧️ Dežuje ves dan — ampak Bulguksa v dežju je magična! ⛩️</span></div>
+            <div class="event-list">
+
+              <div class="event">
+                <div class="event-dot">🗝️</div>
+                <div class="event-info">
+                  <div class="event-time">09:30</div>
+                  <div class="event-title"><span class="t" data-sl="Prevzem Hyundai Avante" data-en="Pick up Hyundai Avante" data-ko="현대 아반떼 인수">Prevzem Hyundai Avante</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Lotte Rent-a-Car, Singyeongju. Preverita vse praske pred odhodom! 🚗" data-en="Lotte Rent-a-Car, Singyeongju. Check all scratches before leaving! 🚗" data-ko="롯데렌터카 신경주. 출발 전 차량 스크래치 확인! 🚗">Lotte Rent-a-Car, Singyeongju. Preverita vse praske pred odhodom! 🚗</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🛕</div>
+                <div class="event-info">
+                  <div class="event-time">10:00 – 13:00</div>
+                  <div class="event-title"><span class="t" data-sl="Tempelj Bulguksa ⛩️" data-en="Bulguksa Temple ⛩️" data-ko="불국사 ⛩️">Tempelj Bulguksa ⛩️</span></div>
+                  <div class="event-desc"><span class="t" data-sl="~20 min z avtom · Unesco dediščina · <strong style=&quot;color:var(--warn-green)&quot;>Odprto 07:00–18:00</strong> · Vstopnina 6.000 KRW/os · Dež med pagodami — dim, mah, tišina. Vzameta dežnika! ☂️" data-en="~20 min by car · UNESCO heritage · <strong style=&quot;color:var(--warn-green)&quot;>Open 07:00–18:00</strong> · Entry 6,000 KRW/person · Rain among pagodas — mist, moss, silence. Bring umbrellas! ☂️" data-ko="차로 ~20분 · 유네스코 유산 · <strong style=&quot;color:var(--warn-green)&quot;>07:00–18:00 개방</strong> · 입장료 6,000원/인 · 빗속 불국사 — 안개, 이끼, 고요. 우산 챙기기! ☂️">~20 min z avtom · Unesco dediščina · <strong style="color:var(--warn-green)">Odprto 07:00–18:00</strong> · Vstopnina 6.000 KRW/os · Dež med pagodami — dim, mah, tišina. Vzameta dežnika! ☂️</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🪨</div>
+                <div class="event-info">
+                  <div class="event-time">13:00 – 14:30</div>
+                  <div class="event-title"><span class="t" data-sl="Seokguram Grotto 🗿" data-en="Seokguram Grotto 🗿" data-ko="석굴암 🗿">Seokguram Grotto 🗿</span></div>
+                  <div class="event-desc"><span class="t" data-sl="10 min nad Bulgukso · <strong style=&quot;color:var(--warn-green)&quot;>Odprto 07:00–18:00</strong> · Vstopnina 6.000 KRW/os · Graniten Buda iz 8. stol. Notranjost pokrita." data-en="10 min above Bulguksa · <strong style=&quot;color:var(--warn-green)&quot;>Open 07:00–18:00</strong> · Entry 6,000 KRW/person · Granite Buddha from the 8th century. Interior covered." data-ko="불국사 위 10분 · <strong style=&quot;color:var(--warn-green)&quot;>07:00–18:00 개방</strong> · 입장료 6,000원/인 · 8세기 화강암 불상. 내부 지붕 있음.">10 min nad Bulgukso · <strong style="color:var(--warn-green)">Odprto 07:00–18:00</strong> · Vstopnina 6.000 KRW/os · Graniten Buda iz 8. stol. Notranjost pokrita.</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🍜</div>
+                <div class="event-info">
+                  <div class="event-time">~14:30 – 15:30</div>
+                  <div class="event-title"><span class="t" data-sl="Kosilo pri Bulguksi" data-en="Lunch near Bulguksa" data-ko="불국사 근처 점심">Kosilo pri Bulguksi</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Restavracije tik ob templju. Topla juha — idealna po mokrem dopoldnevu! 🍲" data-en="Restaurants right by the temple. Hot soup — perfect after a wet morning! 🍲" data-ko="절 바로 옆 식당. 따뜻한 국물 — 비 맞은 오전 후 딱! 🍲">Restavracije tik ob templju. Topla juha — idealna po mokrem dopoldnevu! 🍲</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">⛰️</div>
+                <div class="event-info">
+                  <div class="event-time">15:30 – 17:00</div>
+                  <div class="event-title"><span class="t" data-sl="Daureungwon — z avtom 🏔️" data-en="Daereungwon — by car 🏔️" data-ko="대릉원 — 차로 🏔️">Daureungwon — z avtom 🏔️</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Dež malo popusti popoldne · <strong style=&quot;color:var(--warn-green)&quot;>Odprto 09:00–22:00</strong> · Z avtom parkirata bližje. Zelene gomile v megli so posebno dramatične." data-en="Rain eases in the afternoon · <strong style=&quot;color:var(--warn-green)&quot;>Open 09:00–22:00</strong> · Park closer by car. Green mounds in the mist look especially dramatic." data-ko="오후 비 약해짐 · <strong style=&quot;color:var(--warn-green)&quot;>09:00–22:00 개방</strong> · 차로 가까이 주차. 안개 속 초록 봉분이 극적.">Dež malo popusti popoldne · <strong style="color:var(--warn-green)">Odprto 09:00–22:00</strong> · Z avtom parkirata bližje. Zelene gomile v megli so posebno dramatične.</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏨</div>
+                <div class="event-info">
+                  <div class="event-time">~17:30</div>
+                  <div class="event-title"><span class="t" data-sl="Hotel · Tuš · Počitek" data-en="Hotel · Shower · Rest" data-ko="호텔 · 샤워 · 휴식">Hotel · Tuš · Počitek</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Dež se zvečer umirja na rosenje. Pripravita se na magičen nočni ogled." data-en="Rain eases to drizzle in the evening. Get ready for a magical night visit." data-ko="저녁엔 비가 이슬비로. 환상적인 야간 관람 준비.">Dež se zvečer umirja na rosenje. Pripravita se na magičen nočni ogled.</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏮</div>
+                <div class="event-info">
+                  <div class="event-time">20:00 – 22:00</div>
+                  <div class="event-title">Donggung Palace & Wolji Pond ✨</div>
+                  <div class="event-desc"><span class="t" data-sl="<strong style=&quot;color:var(--warn-green)&quot;>Odprto 09:00–22:00</strong> · 3.000 KRW/os · Osvetljene ruševine se zrcalijo v ribnikih — dež in megla naredita odsev lučk še bolj magičen. To je <em>tisti</em> posnetek! 📸" data-en="<strong style=&quot;color:var(--warn-green)&quot;>Open 09:00–22:00</strong> · 3,000 KRW/person · Lit ruins reflected in ponds — rain and mist make the light reflections even more magical. This is <em>the</em> shot! 📸" data-ko="<strong style=&quot;color:var(--warn-green)&quot;>09:00–22:00 개방</strong> · 3,000원/인 · 조명이 연못에 반영 — 비와 안개로 더욱 환상적. 이게 바로 <em>그</em> 사진! 📸"><strong style="color:var(--warn-green)">Odprto 09:00–22:00</strong> · 3.000 KRW/os · Osvetljene ruševine se zrcalijo v ribnikih — dež in megla naredita odsev lučk še bolj magičen. To je <em>tisti</em> posnetek! 📸</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NEDELJA ── -->
+      <div class="day-item" id="day-sun">
+        <button class="day-trigger" onclick="toggleDay('day-sun')">
+          <span class="day-icon">🚗</span>
+          <div class="day-meta">
+            <div class="day-label"><span class="t" data-sl="Nedelja 21.6. — Road Trip" data-en="Sunday 21.6. — Road Trip" data-ko="일요일 21.6. — 로드트립">Nedelja 21.6. — Road Trip</span></div>
+            <div class="day-sub"><span class="t" data-sl="Pohang/Gampo obala · Popoldne sončno" data-en="Pohang/Gampo coast · Sunny afternoon" data-ko="포항/감포 해안 · 오후 맑음">Pohang/Gampo obala · Popoldne sončno</span></div>
+          </div>
+          <span class="day-chevron">▼</span>
+        </button>
+        <div class="day-body">
+          <div class="day-content">
+            <div class="rain-badge"><span class="t" data-sl="🌤️ Dopoldne megla, popoldan sončno in suho — idealno za obalo! 🌊" data-en="🌤️ Foggy morning, sunny and dry afternoon — perfect for the coast! 🌊" data-ko="🌤️ 오전 안개, 오후 맑고 건조 — 해안 여행 완벽! 🌊">🌤️ Dopoldne megla, popoldan sončno in suho — idealno za obalo! 🌊</span></div>
+            <div class="event-list">
+
+              <div class="event">
+                <div class="event-dot">🌫️</div>
+                <div class="event-info">
+                  <div class="event-time">08:30 – 09:00</div>
+                  <div class="event-title">Hiter zajtrk · Na pot!</div>
+                  <div class="event-desc">Ura prej = manj gneče na obali in več časa za uživanje. Dopoldne še megleno — do 10:00 se razčisti.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🦁</div>
+                <div class="event-info">
+                  <div class="event-time">09:00 – 10:15</div>
+                  <div class="event-title"><span class="t" data-sl="Jeonchon Dragon Cave — morska jama 🌊" data-en="Jeonchon Dragon Cave — sea cave 🌊" data-ko="전촌 용굴 — 해식동굴 🌊">Jeonchon Dragon Cave — morska jama 🌊</span></div>
+                  <div class="event-desc"><span class="t" data-sl="🚗 ~25 min vožnje · Saryonggul in Danyonggul — naravni morski jami z legendo o petih zmajih. Sprehod po leseni poti ~1 uro. <strong style=&quot;color:var(--warn-green)&quot;>Vedno dostopno · Brezplačno.</strong><br>🅿️ <strong>Parkiraj pri pristanišču Jeonchon Port</strong> — nato 30 min peš po obalni poti do jam." data-en="🚗 ~25 min drive · Saryonggul and Danyonggul — natural sea caves with a legend of five dragons. Walk on wooden path ~1 hour. <strong style=&quot;color:var(--warn-green)&quot;>Always accessible · Free.</strong><br>🅿️ <strong>Park at Jeonchon Port</strong> — then 30 min walk along the coastal path to the caves." data-ko="🚗 ~25분 운전 · 사룡굴·단룡굴 — 다섯 용 전설의 해식동굴. 나무 데크 걷기 ~1시간. <strong style=&quot;color:var(--warn-green)&quot;>상시 개방 · 무료.</strong><br>🅿️ <strong>전촌항에 주차</strong> — 해안길로 30분 걸어서 동굴.">🚗 ~25 min vožnje · Saryonggul in Danyonggul — naravni morski jami z legendo o petih zmajih. Sprehod po leseni poti ~1 uro. <strong style="color:var(--warn-green)">Vedno dostopno · Brezplačno.</strong><br>🅿️ <strong>Parkiraj pri pristanišču Jeonchon Port</strong> — nato 30 min peš po obalni poti do jam.</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏛️</div>
+                <div class="event-info">
+                  <div class="event-time">~10:15 (opcijsko)</div>
+                  <div class="event-title"><span class="t" data-sl="Gameunsa Temple Site — ruševine ob morju ⛩️" data-en="Gameunsa Temple Site — seaside ruins ⛩️" data-ko="감은사지 — 해변 사지 ⛩️">Gameunsa Temple Site — ruševine ob morju ⛩️</span></div>
+                  <div class="event-desc"><span class="t" data-sl="🚗 ~5 min od Dragon Cave · Dramatični ostanki dveh kamnenih pagod sredi travnika — zgradil jih je isti kralj ki leži pod morjem (Munmu). Zelo fotogenično zjutraj. <strong style=&quot;color:var(--warn-green)&quot;>Brezplačno · 10 min ogleda.</strong>" data-en="🚗 ~5 min from Dragon Cave · Dramatic remains of two stone pagodas in a meadow — built by the same king buried under the sea (Munmu). Very photogenic in the morning. <strong style=&quot;color:var(--warn-green)&quot;>Free · 10 min visit.</strong>" data-ko="🚗 용굴에서 ~5분 · 초원 위 두 석탑 — 바다 속에 묻힌 문무왕이 건립. 아침에 매우 포토제닉. <strong style=&quot;color:var(--warn-green)&quot;>무료 · 10분 관람.</strong>">🚗 ~5 min od Dragon Cave · Dramatični ostanki dveh kamnenih pagod sredi travnika — zgradil jih je isti kralj ki leži pod morjem (Munmu). Zelo fotogenično zjutraj. <strong style="color:var(--warn-green)">Brezplačno · 10 min ogleda.</strong></span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🪨</div>
+                <div class="event-info">
+                  <div class="event-time">10:15 – 11:00</div>
+                  <div class="event-title"><span class="t" data-sl="Yangnam Columnar Joints — bazaltni stebri 🌋" data-en="Yangnam Columnar Joints — basalt columns 🌋" data-ko="양남 주상절리 — 현무암 기둥 🌋">Yangnam Columnar Joints — bazaltni stebri 🌋</span></div>
+                  <div class="event-desc">🚗 ~10 min · Šesterokotni bazaltni stebri — redka geološka točka, naravni monument. <strong style="color:var(--warn-green)">Vedno dostopno · Brezplačno.</strong><br>🅿️ <strong>Pri observatoriju samo 4 mesta</strong> — parkiraj pri ribiški tržnici (어시장) in pojdi peš čez viseči most. Ona poišče: 양남주상절리 주차장.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">☕</div>
+                <div class="event-info">
+                  <div class="event-time">11:00 – 12:00</div>
+                  <div class="event-title"><span class="t" data-sl="1925 Gampo Café ☕" data-en="1925 Gampo Café ☕" data-ko="1925 감포 카페 ☕">1925 Gampo Café ☕</span></div>
+                  <div class="event-desc"><span class="t" data-sl="🚗 ~5 min · 100 let star bathhouse predelan v retro kavarno — vintage ploščice, stare table, arcade stroji. <strong style=&quot;color:var(--warn-green)&quot;>Odprto 11:00–19:00 · Odprto ob nedeljah ✅</strong><br>🅿️ Lastno parkirišče ob kavarni." data-en="🚗 ~5 min · 100-year-old bathhouse turned retro café — vintage tiles, old tables, arcade machines. <strong style=&quot;color:var(--warn-green)&quot;>Open 11:00–19:00 · Open Sundays ✅</strong><br>🅿️ Own parking lot next to the café." data-ko="🚗 ~5분 · 100년 된 목욕탕을 레트로 카페로 — 빈티지 타일, 오래된 테이블, 오락기. <strong style=&quot;color:var(--warn-green)&quot;>11:00–19:00 영업 · 일요일 영업 ✅</strong><br>🅿️ 카페 옆 전용 주차장.">🚗 ~5 min · 100 let star bathhouse predelan v retro kavarno — vintage ploščice, stare table, arcade stroji. <strong style="color:var(--warn-green)">Odprto 11:00–19:00 · Odprto ob nedeljah ✅</strong><br>🅿️ Lastno parkirišče ob kavarni.</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🐟</div>
+                <div class="event-info">
+                  <div class="event-time">12:00 – 13:30</div>
+                  <div class="event-title"><span class="t" data-sl="Pohang — Jukdo Market & Mulhoe 🦑" data-en="Pohang — Jukdo Market & Mulhoe 🦑" data-ko="포항 — 죽도시장 & 물회 🦑">Pohang — Jukdo Market & Mulhoe 🦑</span></div>
+                  <div class="event-desc">🚗 ~30 min od Gampa · Sveža riba, sashimi, Pohang Mulhoe — hladna surova ribja juha z ledom. Lokalna specialiteta! ☀️ Ob 12:00 že sončno.<br>🅿️ Velika javna garaža tik ob tržnici — brez skrbi.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🎡</div>
+                <div class="event-info">
+                  <div class="event-time">13:30 – 15:30</div>
+                  <div class="event-title"><span class="t" data-sl="Yeongildae Beach & SpaceWalk ☀️" data-en="Yeongildae Beach & SpaceWalk ☀️" data-ko="영일대 해수욕장 & 스페이스워크 ☀️">Yeongildae Beach & SpaceWalk ☀️</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Najlepša plaža v Pohang · SpaceWalk — jeklena skulptura s 717 stopnicami z razgledom na morje. Popoldan sončno, 24°C. <strong style=&quot;color:var(--warn-green)&quot;>Vedno dostopno · Brezplačno.</strong><br>🅿️ <strong>Ob vikendih je obalna cesta kaos</strong> — parkiraj na Duho-dong Public Parking Lot ali Yeongildae 2nd Parking Lot. Ona poišče: 두호동 공영주차장." data-en="Most beautiful beach in Pohang · SpaceWalk — steel sculpture with 717 steps and sea views. Sunny afternoon, 24°C. <strong style=&quot;color:var(--warn-green)&quot;>Always accessible · Free.</strong><br>🅿️ <strong>Coastal road chaos on weekends</strong> — park at Duho-dong Public Parking or Yeongildae 2nd Parking. Search: 두호동 공영주차장." data-ko="포항 최고의 해수욕장 · 스페이스워크 — 717계단 철 조형물과 바다 전망. 오후 맑음, 24°C. <strong style=&quot;color:var(--warn-green)&quot;>상시 개방 · 무료.</strong><br>🅿️ <strong>주말 해안도로 혼잡</strong> — 두호동 공영주차장 또는 영일대 2주차장 이용. 검색: 두호동 공영주차장.">Najlepša plaža v Pohang · SpaceWalk — jeklena skulptura s 717 stopnicami z razgledom na morje. Popoldan sončno, 24°C. <strong style="color:var(--warn-green)">Vedno dostopno · Brezplačno.</strong><br>🅿️ <strong>Ob vikendih je obalna cesta kaos</strong> — parkiraj na Duho-dong Public Parking Lot ali Yeongildae 2nd Parking Lot. Ona poišče: 두호동 공영주차장.</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🚗</div>
+                <div class="event-info">
+                  <div class="event-time">~16:00</div>
+                  <div class="event-title"><span class="t" data-sl="Vrnitev v Gyeongju" data-en="Return to Gyeongju" data-ko="경주로 귀환">Vrnitev v Gyeongju</span></div>
+                  <div class="event-desc"><span class="t" data-sl="~45 min vožnje. Zvečer popolnoma jasno (0% dež) — prvič ta vikend!" data-en="~45 min drive. Completely clear in the evening (0% rain) — first time this weekend!" data-ko="~45분 운전. 저녁은 완전 맑음 (비 0%) — 이번 주말 처음!">~45 min vožnje. Zvečer popolnoma jasno (0% dež) — prvič ta vikend!</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🍽️</div>
+                <div class="event-info">
+                  <div class="event-time">18:00 – 19:30</div>
+                  <div class="event-title"><span class="t" data-sl="Večerja na prostem 🌙" data-en="Outdoor dinner 🌙" data-ko="야외 저녁 식사 🌙">Večerja na prostem 🌙</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Jasno nebo, 21°C — prvič ta vikend brez dežja zvečer! Terasa ob Hwangridan ali galbi restavracija. Uživajta! 🥂" data-en="Clear sky, 21°C — first evening without rain this weekend! Terrace at Hwangridan or galbi restaurant. Enjoy! 🥂" data-ko="맑은 하늘, 21°C — 이번 주말 첫 맑은 저녁! 황리단 테라스 또는 갈비 식당. 즐기세요! 🥂">Jasno nebo, 21°C — prvič ta vikend brez dežja zvečer! Terasa ob Hwangridan ali galbi restavracija. Uživajta! 🥂</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PONEDELJEK ── -->
+      <div class="day-item" id="day-mon">
+        <button class="day-trigger" onclick="toggleDay('day-mon')">
+          <span class="day-icon">☀️</span>
+          <div class="day-meta">
+            <div class="day-label">Ponedeljek — Odhod</div>
+            <div class="day-sub"><span class="t" data-sl="Bomun · Woljeonggyo · Vlak 18:00" data-en="Bomun · Woljeonggyo · Train 18:00" data-ko="보문 · 월정교 · 기차 18:00">Bomun · Woljeonggyo · Vlak 18:00</span></div>
+          </div>
+          <span class="day-chevron">▼</span>
+        </button>
+        <div class="day-body">
+          <div class="day-content">
+            <div class="rain-badge"><span class="t" data-sl="☀️ Lepo vreme — uživajta!" data-en="☀️ Beautiful weather — enjoy!" data-ko="☀️ 좋은 날씨 — 즐기세요!">☀️ Lepo vreme — uživajta!</span></div>
+            <div class="event-list">
+
+              <div class="event">
+                <div class="event-dot">🏞️</div>
+                <div class="event-info">
+                  <div class="event-time">09:15 – 11:00</div>
+                  <div class="event-title"><span class="t" data-sl="Bomun Lake Resort" data-en="Bomun Lake Resort" data-ko="보문호 리조트">Bomun Lake Resort</span></div>
+                  <div class="event-desc">Jutranja vožnja okoli jezera. Mirno, prostorno — idealno za zadnji košček Koreje.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🗼</div>
+                <div class="event-info">
+                  <div class="event-time">11:00 – 12:15</div>
+                  <div class="event-title"><span class="t" data-sl="Gyeongju Tower (Expo Park)" data-en="Gyeongju Tower (Expo Park)" data-ko="경주타워 (엑스포공원)">Gyeongju Tower (Expo Park)</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Razgledni stolp 82m z panoramskim pogledom na dolino Gyeongju. <strong style=&quot;color:var(--warn-green)&quot;>Odprto 10:00–18:00.</strong>" data-en="82m observation tower with panoramic views of the Gyeongju valley. <strong style=&quot;color:var(--warn-green)&quot;>Open 10:00–18:00.</strong>" data-ko="82m 전망탑, 경주 분지 파노라마 뷰. <strong style=&quot;color:var(--warn-green)&quot;>10:00–18:00 개방.</strong>">Razgledni stolp 82m z panoramskim pogledom na dolino Gyeongju. <strong style="color:var(--warn-green)">Odprto 10:00–18:00.</strong></span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🍽️</div>
+                <div class="event-info">
+                  <div class="event-time">12:15 – 13:15</div>
+                  <div class="event-title"><span class="t" data-sl="Kosilo ob Expo parku" data-en="Lunch near the Expo Park" data-ko="엑스포공원 근처 점심">Kosilo ob Expo parku</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Restavracije tik ob Gyeongju Tower. Zadnje korejsko kosilo — uživajta! 🥢" data-en="Restaurants right by Gyeongju Tower. Last Korean meal — enjoy! 🥢" data-ko="경주타워 바로 옆 식당. 마지막 한국 음식 — 맛있게! 🥢">Restavracije tik ob Gyeongju Tower. Zadnje korejsko kosilo — uživajta! 🥢</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🏘️</div>
+                <div class="event-info">
+                  <div class="event-time">13:00 – 14:30</div>
+                  <div class="event-title">Gyochon Hanok Village + Woljeonggyo 🔁</div>
+                  <div class="event-desc">Hanok vasica in leseni most — backup če ju v petek nista utegnila. Sicer prosti čas za zadnje nakupe ali kavico.</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🧳</div>
+                <div class="event-info">
+                  <div class="event-time">09:00</div>
+                  <div class="event-title"><span class="t" data-sl="Prtljaga v avto — odhod!" data-en="Luggage in the car — let's go!" data-ko="짐을 차에 — 출발!">Prtljaga v avto — odhod!</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Prtljaga gre zjutraj v avto — ves dan prosti! Ni vračanja v hotel. 👌" data-en="Luggage goes in the car in the morning — free all day! No need to return to the hotel. 👌" data-ko="아침에 짐을 차에 — 하루 종일 자유! 호텔 복귀 불필요. 👌">Prtljaga gre zjutraj v avto — ves dan prosti! Ni vračanja v hotel. 👌</span></div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🚗</div>
+                <div class="event-info">
+                  <div class="event-time">17:30</div>
+                  <div class="event-title"><span class="t" data-sl="Vračilo avtomobila" data-en="Return the car" data-ko="렌터카 반납">Vračilo avtomobila</span></div>
+                  <div class="event-desc">Lotte Rent-a-Car, Singyeongju. Vlak ob 18:25 — pridita vsaj 30 min prej za pregled!</div>
+                </div>
+              </div>
+
+              <div class="event">
+                <div class="event-dot">🚆</div>
+                <div class="event-info">
+                  <div class="event-time">18:25 → 20:34</div>
+                  <div class="event-title"><span class="t" data-sl="KTX 126 — Gyeongju → Suwon 👋" data-en="KTX 126 — Gyeongju → Suwon 👋" data-ko="KTX 126 — 경주 → 수원 👋">KTX 126 — Gyeongju → Suwon 👋</span></div>
+                  <div class="event-desc"><span class="t" data-sl="Odhod Singyeongju <strong style=&quot;color:var(--accent)&quot;>18:25</strong> · Prihod Suwon 20:34. Nasvidenje, Gyeongju!" data-en="Depart Singyeongju <strong style=&quot;color:var(--accent)&quot;>18:25</strong> · Arrive Suwon 20:34. Goodbye, Gyeongju!" data-ko="신경주 출발 <strong style=&quot;color:var(--accent)&quot;>18:25</strong> · 수원 도착 20:34. 경주야 안녕!">Odhod Singyeongju <strong style="color:var(--accent)">18:25</strong> · Prihod Suwon 20:34. Nasvidenje, Gyeongju!</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.day-list -->
+  </section>
+
+  <!-- ═══════════════════════════════════
+       PANEL 2 — LOKACIJE
+  ═══════════════════════════════════ -->
+  <section class="panel" id="panel-locations">
+
+    <p class="section-heading px"><span class="t" data-sl="🏨 Nastanitev" data-en="🏨 Accommodation" data-ko="🏨 숙소">🏨 Nastanitev</span></p>
+    <div class="locations">
+      <a class="loc-btn" href="https://naver.me/xrzjojg1" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏨</span>
+        <div class="loc-info">
+          <div class="loc-name">Aventa Hotel</div>
+          <div class="loc-tag"><span class="t" data-sl="Nastanitev Pet–Pon · Prtljaga · Check-in" data-en="Accommodation Fri–Mon · Luggage · Check-in" data-ko="숙소 금–월 · 짐 맡기기 · 체크인">Nastanitev Pet–Pon · Prtljaga · Check-in</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="🚆 Transport" data-en="🚆 Transport" data-ko="🚆 교통">🚆 Transport</span></p>
+    <div class="locations">
+      <a class="loc-btn" href="https://naver.me/5CrP626R" target="_blank" rel="noopener">
+        <span class="loc-emoji">🚆</span>
+        <div class="loc-info">
+          <div class="loc-name">Singyeongju KTX Postaja</div>
+          <div class="loc-tag"><span class="t" data-sl="Prihod Petek · Odhod Ponedeljek 18:00" data-en="Arrival Friday · Departure Monday 18:00" data-ko="금요일 도착 · 월요일 18:00 출발">Prihod Petek · Odhod Ponedeljek 18:00</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/x5GoLs7a" target="_blank" rel="noopener">
+        <span class="loc-emoji">🚗</span>
+        <div class="loc-info">
+          <div class="loc-name">Lotte Rent-a-Car Gyeongju</div>
+          <div class="loc-tag"><span class="t" data-sl="Prevzem Sob 09:30 · Vračilo Pon 17:00 · Rez. 2622334634" data-en="Pick-up Sat 09:30 · Return Mon 17:00 · Res. 2622334634" data-ko="토요일 09:30 인수 · 월요일 17:00 반납 · 예약 2622334634">Prevzem Sob 09:30 · Vračilo Pon 17:00 · Rez. 2622334634</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="☕ Petek — Peš od hotela" data-en="☕ Friday — Walking from the hotel" data-ko="☕ 금요일 — 호텔에서 도보">☕ Petek — Peš od hotela</span></p>
+    <div class="locations">
+      <a class="loc-btn" href="https://naver.me/x3jFNE36" target="_blank" rel="noopener">
+        <span class="loc-emoji">⛰️</span>
+        <div class="loc-info">
+          <div class="loc-name">Daureungwon — Tumuli Park</div>
+          <div class="loc-tag"><span class="t" data-sl="🚶 0.9 km · 09:00–22:00 · ~3.000 KRW" data-en="🚶 0.9 km · 09:00–22:00 · ~3,000 KRW" data-ko="🚶 0.9km · 09:00–22:00 · ~3,000원">🚶 0.9 km · 09:00–22:00 · ~3.000 KRW</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/GJTiv7JT" target="_blank" rel="noopener">
+        <span class="loc-emoji">🔭</span>
+        <div class="loc-info">
+          <div class="loc-name">Cheomseongdae Observatory</div>
+          <div class="loc-tag">🚶 +10 min · 09:00–22:00 · Brezplačno</div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/GTnqmBkn" target="_blank" rel="noopener">
+        <span class="loc-emoji">🌳</span>
+        <div class="loc-info">
+          <div class="loc-name">Gyerim gozd (계림)</div>
+          <div class="loc-tag"><span class="t" data-sl="🚶 +5 min od Cheomseongdae · Legendarni gaj · Brezplačen" data-en="🚶 +5 min from Cheomseongdae · Legendary grove · Free" data-ko="🚶 첨성대에서 +5분 · 전설의 숲 · 무료">🚶 +5 min od Cheomseongdae · Legendarni gaj · Brezplačen</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/54Lb57cn" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏘️</span>
+        <div class="loc-info">
+          <div class="loc-name">Gyochon Hanok Village</div>
+          <div class="loc-tag"><span class="t" data-sl="🚶 +5 min od Gyerima · Tradicionalna vasica · Brezplačen" data-en="🚶 +5 min from Gyerim · Traditional village · Free" data-ko="🚶 계림에서 +5분 · 전통 마을 · 무료">🚶 +5 min od Gyerima · Tradicionalna vasica · Brezplačen</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/FG7xnCs8" target="_blank" rel="noopener">
+        <span class="loc-emoji">🌉</span>
+        <div class="loc-info">
+          <div class="loc-name">Most Woljeonggyo</div>
+          <div class="loc-tag"><span class="t" data-sl="🚶 +2 min od Gyochona · Shilla leseni most · Brezplačen" data-en="🚶 +2 min from Gyochon · Silla wooden bridge · Free" data-ko="🚶 교촌에서 +2분 · 신라 목교 · 무료">🚶 +2 min od Gyochona · Shilla leseni most · Brezplačen</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/GUwSCIgn" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏮</span>
+        <div class="loc-info">
+          <div class="loc-name">Hwangridan-gil ulica</div>
+          <div class="loc-tag">🚶 +10 min od Gyerima · Kavarne · Street food</div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/GCvq6Suj" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏛️</span>
+        <div class="loc-info">
+          <div class="loc-name">Gyeongju Narodni muzej</div>
+          <div class="loc-tag"><span class="t" data-sl="Pod streho · Brezplačen · Pet: odprt do 21:00 🎉" data-en="Indoors · Free · Fri: open until 21:00 🎉" data-ko="실내 · 무료 · 금요일 21:00까지 🎉">Pod streho · Brezplačen · Pet: odprt do 21:00 🎉</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/5FmSoI8P" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏮</span>
+        <div class="loc-info">
+          <div class="loc-name">Donggung Palace & Wolji Pond</div>
+          <div class="loc-tag"><span class="t" data-sl="🚶 1.5 km · 09:00–22:00 · 3.000 KRW · Lučke ✨" data-en="🚶 1.5 km · 09:00–22:00 · 3,000 KRW · Lights ✨" data-ko="🚶 1.5km · 09:00–22:00 · 3,000원 · 야경 ✨">🚶 1.5 km · 09:00–22:00 · 3.000 KRW · Lučke ✨</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="🛕 Sobota — Bulguksa & Gyeongju" data-en="🛕 Saturday — Bulguksa & Gyeongju" data-ko="🛕 토요일 — 불국사 & 경주">🛕 Sobota — Bulguksa & Gyeongju</span></p>
+    <div class="locations">
+      <a class="loc-btn" href="https://naver.me/xzxmFxTH" target="_blank" rel="noopener">
+        <span class="loc-emoji">🛕</span>
+        <div class="loc-info">
+          <div class="loc-name">Tempelj Bulguksa</div>
+          <div class="loc-tag"><span class="t" data-sl="07:00–18:00 · 6.000 KRW · ~20 min z avtom" data-en="07:00–18:00 · 6,000 KRW · ~20 min by car" data-ko="07:00–18:00 · 6,000원 · 차로 ~20분">07:00–18:00 · 6.000 KRW · ~20 min z avtom</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/GYC92L82" target="_blank" rel="noopener">
+        <span class="loc-emoji">🪨</span>
+        <div class="loc-info">
+          <div class="loc-name">Seokguram Grotto</div>
+          <div class="loc-tag"><span class="t" data-sl="07:00–18:00 · 6.000 KRW · 10 min nad Bulgukso" data-en="07:00–18:00 · 6,000 KRW · 10 min above Bulguksa" data-ko="07:00–18:00 · 6,000원 · 불국사 위 10분">07:00–18:00 · 6.000 KRW · 10 min nad Bulgukso</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/x3jFNE36" target="_blank" rel="noopener">
+        <span class="loc-emoji">⛰️</span>
+        <div class="loc-info">
+          <div class="loc-name">Daureungwon — Tumuli Park</div>
+          <div class="loc-tag"><span class="t" data-sl="09:00–22:00 · Z avtom · Zelene grobnice" data-en="09:00–22:00 · By car · Green burial mounds" data-ko="09:00–22:00 · 차로 · 초록 봉분">09:00–22:00 · Z avtom · Zelene grobnice</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/5FmSoI8P" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏮</span>
+        <div class="loc-info">
+          <div class="loc-name">Donggung Palace & Wolji Pond</div>
+          <div class="loc-tag"><span class="t" data-sl="09:00–22:00 · 3.000 KRW · Lučke v dežju ✨" data-en="09:00–22:00 · 3,000 KRW · Lights in the rain ✨" data-ko="09:00–22:00 · 3,000원 · 빗속 야경 ✨">09:00–22:00 · 3.000 KRW · Lučke v dežju ✨</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="🌊 Nedelja — Road Trip Obala" data-en="🌊 Sunday — Road Trip Coast" data-ko="🌊 일요일 — 로드트립 해안">🌊 Nedelja — Road Trip Obala</span></p>
+    <div class="locations">
+      <a class="loc-btn" href="https://naver.me/54LiZDHN" target="_blank" rel="noopener">
+        <span class="loc-emoji">🅿️</span>
+        <div class="loc-info">
+          <div class="loc-name">Jeonchon Port (전촌항) — parking</div>
+          <div class="loc-tag"><span class="t" data-sl="Parkiraj tu · 30 min peš do Dragon Cave" data-en="Park here · 30 min walk to Dragon Cave" data-ko="여기 주차 · 용굴까지 30분 도보">Parkiraj tu · 30 min peš do Dragon Cave</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://map.naver.com/p/entry/place/1700850236?placePath=%2Fhome" target="_blank" rel="noopener">
+        <span class="loc-emoji">🦁</span>
+        <div class="loc-info">
+          <div class="loc-name">Jeonchon Dragon Cave (전촌 용굴)</div>
+          <div class="loc-tag"><span class="t" data-sl="Morska jama · Brezplačno · Vedno odprto" data-en="Sea cave · Free · Always open" data-ko="해식동굴 · 무료 · 상시 개방">Morska jama · Brezplačno · Vedno odprto</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://map.naver.com/p/entry/place/15772342?placePath=%2Fhome" target="_blank" rel="noopener">
+        <span class="loc-emoji">⛩️</span>
+        <div class="loc-info">
+          <div class="loc-name">Gameunsa Temple Site (감은사지) ✨ opcijsko</div>
+          <div class="loc-tag"><span class="t" data-sl="~5–10 min z avtom · Brezplačno · 10 min ogleda" data-en="~5–10 min by car · Free · 10 min visit" data-ko="차로 ~5–10분 · 무료 · 10분 관람">~5–10 min z avtom · Brezplačno · 10 min ogleda</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/xKEqnG5n" target="_blank" rel="noopener">
+        <span class="loc-emoji">🪨</span>
+        <div class="loc-info">
+          <div class="loc-name">Yangnam Columnar Joints (양남 주상절리)</div>
+          <div class="loc-tag"><span class="t" data-sl="Bazaltni stebri · Brezplačno · Parkiraj pri 어시장" data-en="Basalt columns · Free · Park at 어시장" data-ko="현무암 기둥 · 무료 · 어시장 주차">Bazaltni stebri · Brezplačno · Parkiraj pri 어시장</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://map.naver.com/p/entry/place/1980775144?placePath=%2Fhome" target="_blank" rel="noopener">
+        <span class="loc-emoji">☕</span>
+        <div class="loc-info">
+          <div class="loc-name">1925 Gampo Café</div>
+          <div class="loc-tag"><span class="t" data-sl="11:00–19:00 · Zaprto pon · Retro bathhouse · Lastno parking" data-en="11:00–19:00 · Closed Mon · Retro bathhouse · Own parking" data-ko="11:00–19:00 · 월요일 휴무 · 레트로 목욕탕 · 전용 주차">11:00–19:00 · Zaprto pon · Retro bathhouse · Lastno parking</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://map.naver.com/p/entry/place/1068655821?placePath=%2Fhome" target="_blank" rel="noopener">
+        <span class="loc-emoji">🐟</span>
+        <div class="loc-info">
+          <div class="loc-name">Pohang Jukdo Market (죽도시장)</div>
+          <div class="loc-tag">Sashimi · Mulhoe · Javna garaža ob tržnici</div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://map.naver.com/p/entry/place/21176659?placePath=%2Fhome" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏖️</span>
+        <div class="loc-info">
+          <div class="loc-name">Yeongildae Beach (영일대해수욕장)</div>
+          <div class="loc-tag"><span class="t" data-sl="Plaža · Ob vikendih gneča!" data-en="Beach · Crowded on weekends!" data-ko="해수욕장 · 주말 혼잡!">Plaža · Ob vikendih gneča!</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/IDFUxVu0" target="_blank" rel="noopener">
+        <span class="loc-emoji">🎡</span>
+        <div class="loc-info">
+          <div class="loc-name">SpaceWalk (스페이스워크)</div>
+          <div class="loc-tag"><span class="t" data-sl="717 stopnic · Razgled · Brezplačno" data-en="717 steps · View · Free" data-ko="717계단 · 전망 · 무료">717 stopnic · Razgled · Brezplačno</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://map.naver.com/p/entry/place/355429295?placePath=%2Fhome" target="_blank" rel="noopener">
+        <span class="loc-emoji">🅿️</span>
+        <div class="loc-info">
+          <div class="loc-name">Duho-dong Parking (두호동 공영주차장)</div>
+          <div class="loc-tag">Za SpaceWalk · Priporočeno ob vikendih</div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="☀️ Ponedeljek — Jezero & Odhod" data-en="☀️ Monday — Lake & Departure" data-ko="☀️ 월요일 — 호수 & 출발">☀️ Ponedeljek — Jezero & Odhod</span></p>
+    <div class="locations">
+      <a class="loc-btn" href="https://naver.me/FEgWIIFo" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏞️</span>
+        <div class="loc-info">
+          <div class="loc-name">Bomun Lake Resort</div>
+          <div class="loc-tag"><span class="t" data-sl="09:15 · Jutranja vožnja okoli jezera" data-en="09:15 · Morning drive around the lake" data-ko="09:15 · 호수 아침 드라이브">09:15 · Jutranja vožnja okoli jezera</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/5Xc8YyHc" target="_blank" rel="noopener">
+        <span class="loc-emoji">🗼</span>
+        <div class="loc-info">
+          <div class="loc-name">Gyeongju Tower — Expo Park</div>
+          <div class="loc-tag"><span class="t" data-sl="11:00 · 82m razgled · 10:00–18:00" data-en="11:00 · 82m views · 10:00–18:00" data-ko="11:00 · 82m 전망 · 10:00–18:00">11:00 · 82m razgled · 10:00–18:00</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/x2YsOlQn" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏔️</span>
+        <div class="loc-info">
+          <div class="loc-name">Namsan — Samneung Valley</div>
+          <div class="loc-tag">13:30 · Parkiraj pri Sambulsa parking · Brezplačno</div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/54Lb57cn" target="_blank" rel="noopener">
+        <span class="loc-emoji">🏘️</span>
+        <div class="loc-info">
+          <div class="loc-name">Gyochon Hanok Village *(opcijsko)*</div>
+          <div class="loc-tag"><span class="t" data-sl="~15:30 · Samo če nista videla v petek" data-en="~15:30 · Only if you didn't see them Friday" data-ko="~15:30 · 금요일에 못 봤을 때만">~15:30 · Samo če nista videla v petek</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+      <a class="loc-btn" href="https://naver.me/FG7xnCs8" target="_blank" rel="noopener">
+        <span class="loc-emoji">🌉</span>
+        <div class="loc-info">
+          <div class="loc-name">Most Woljeonggyo *(opcijsko)*</div>
+          <div class="loc-tag"><span class="t" data-sl="Tik ob Gyochonu · Brezplačno" data-en="Right next to Gyochon · Free" data-ko="교촌 바로 옆 · 무료">Tik ob Gyochonu · Brezplačno</span></div>
+        </div>
+        <span class="loc-arrow">↗</span>
+      </a>
+    </div>
+
+    <div class="locations">
+      <div style="padding: 14px 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <p style="font-size: 12px; color: var(--muted); line-height: 1.6;">
+          💡 <strong style="color: var(--accent2);">Nasvet:</strong> Shrani vse lokacije v Naver Maps ★ Priljubljene pred odhodom iz WiFi-ja!
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════
+       PANEL 3 — CRASH COURSE VOŽNJA
+  ═══════════════════════════════════ -->
+  <section class="panel" id="panel-driving">
+
+    <p class="section-heading px"><span class="t" data-sl="🚗 Vaš avto" data-en="🚗 Your car" data-ko="🚗 렌터카 정보">🚗 Vaš avto</span></p>
+    <div class="crash-list">
+      <div class="crash-card blue-card">
+        <div class="crash-header">
+          <span class="crash-icon">🚗</span>
+          <span class="crash-title"><span class="t" data-sl="HYUNDAI AVANTE (H) — Rezervacija 2622334634" data-en="HYUNDAI AVANTE (H) — Reservation 2622334634" data-ko="현대 아반떼 (H) — 예약번호 2622334634">HYUNDAI AVANTE (H) — Rezervacija 2622334634</span></span>
+        </div>
+        <div class="crash-body">
+          <strong class="t" data-sl="Prevzem:" data-en="Pick-up:" data-ko="인수:">Prevzem:</strong> Sob 20.6. ob <span class="highlight">09:30</span><br>
+          <strong class="t" data-sl="Vračilo:" data-en="Return:" data-ko="반납:">Vračilo:</strong> Pon 22.6. ob <span class="highlight">17:00</span><br>
+          <strong class="t" data-sl="Lokacija:" data-en="Location:" data-ko="위치:">Lokacija:</strong> 393-3 Gwangmyeong-dong, Gyeongju<br>
+          <strong class="t" data-sl="Zavarovanje:" data-en="Insurance:" data-ko="보험:">Zavarovanje:</strong> <span class="t" data-sl="CDW z 0 KRW franšizo ✅ — popolnoma pokrita!" data-en="CDW 0 KRW excess ✅ — fully covered!" data-ko="CDW 0원 자기부담금 ✅ — 완전 보장!">CDW z 0 KRW franšizo ✅ — popolnoma pokrita!</span><br>
+          <strong class="t" data-sl="Gorivo:" data-en="Fuel:" data-ko="연료:">Gorivo:</strong> <span class="highlight">휘발유 = <span class="t" data-sl="benzin (petrol)" data-en="petrol" data-ko="휘발유">benzin (petrol)</span></span> — <span class="t" data-sl="NE dizel, NE LPG!" data-en="NOT diesel, NOT LPG!" data-ko="디젤·LPG 아님!">NE dizel, NE LPG!</span><br><br>
+          <span class="t" data-sl="Pred odhodom preverita vse praske in jih fotografirajta. 📸" data-en="Before leaving, check all scratches and photograph them. 📸" data-ko="출발 전 스크래치 확인 및 사진 촬영. 📸">Pred odhodom preverita vse praske in jih fotografirajta. 📸</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="⛽ Gorivo" data-en="⛽ Fuel" data-ko="⛽ 주유">⛽ Gorivo</span></p>
+    <div class="crash-list">
+      <div class="crash-card yellow-card">
+        <div class="crash-header">
+          <span class="crash-icon">⛽</span>
+          <span class="crash-title"><span class="t" data-sl="TANKANJE — SELF SERVICE (셀프)" data-en="REFUELING — SELF SERVICE (셀프)" data-ko="주유 — 셀프 주유소">TANKANJE — SELF SERVICE (셀프)</span></span>
+        </div>
+        <div class="crash-body">
+          <span class="t" data-sl="Iščita postaje z napisom" data-en="Look for stations with" data-ko="표지판 찾기">Iščita postaje z napisom</span> <span class="highlight">셀프 (Self)</span> — <span class="t" data-sl="cenejše za 5–8%." data-en="5–8% cheaper." data-ko="5~8% 저렴.">cenejše za 5–8%.</span><br>
+          <span class="t" data-sl="Blagovne znamke:" data-en="Brands:" data-ko="브랜드:">Blagovne znamke:</span> <strong>GS Caltex, SK Energy, S-OIL, Hyundai Oilbank</strong> — <span class="t" data-sl="vse enake." data-en="all the same." data-ko="모두 동일.">vse enake.</span><br><br>
+          <strong>⚠️ <span class="t" data-sl="POZOR:" data-en="WARNING:" data-ko="주의:">POZOR:</span></strong> <span class="t" data-sl="Pazita na postaje z napisom" data-en="Avoid stations marked" data-ko="표지판 주의">Pazita na postaje z napisom</span> <span class="highlight">LPG충전소</span> — <span class="t" data-sl="to NI bencinska! Avante teče na" data-en="NOT petrol! Avante runs on" data-ko="휘발유 아님! 아반떼는">to NI bencinska! Avante teče na</span> <strong>휘발유</strong> (benzin).<br><br>
+          <strong class="t" data-sl="Postopek tankanja:" data-en="Fueling steps:" data-ko="주유 방법:">Postopek tankanja:</strong><br>
+          1. <span class="t" data-sl="Pritisnita" data-en="Press" data-ko="누르기">Pritisnita</span> <strong>시작하기</strong> (Start)<br>
+          2. <span class="t" data-sl="Dotaknita se" data-en="Touch the" data-ko="터치">Dotaknita se</span> <strong><span class="t" data-sl="zelenega anti-statičnega gumba" data-en="green anti-static button" data-ko="초록 정전기 방지 버튼">zelenega anti-statičnega gumba</span></strong> 🟢 (<span class="t" data-sl="obvezno!" data-en="mandatory!" data-ko="필수!">obvezno!</span>)<br>
+          3. <span class="t" data-sl="Izberita" data-en="Select" data-ko="선택">Izberita</span> <strong>휘발유</strong> (benzin)<br>
+          4. <span class="t" data-sl="Plačajta s kartico → vnesite znesek" data-en="Pay by card → enter amount" data-ko="카드 결제 → 금액 입력">Plačajta s kartico → vnesite znesek</span> (<span class="t" data-sl="npr. 50.000 KRW — zaračuna le porabljeno" data-en="e.g. 50,000 KRW — only charges what you used" data-ko="예: 50,000원 — 실제 사용량만 청구">npr. 50.000 KRW — zaračuna le porabljeno</span>)<br>
+          5. <span class="t" data-sl="Točita gorivo" data-en="Pump fuel" data-ko="주유">Točita gorivo</span><br><br>
+          <strong>Full service</strong> (<span class="t" data-sl="brez napisa 셀프" data-en="no 셀프 sign" data-ko="셀프 표지 없음">brez napisa 셀프</span>): <span class="t" data-sl="Ostanita v avtu, recita:" data-en="Stay in the car, say:" data-ko="차 안에서 말하기:">Ostanita v avtu, recita:</span> <em>"휘발유 가득히요"</em> (hwibalyu gadeuk-hiyo) = <span class="t" data-sl="poln tank benzina." data-en="full tank of petrol." data-ko="가득 채워주세요.">poln tank benzina.</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="🅿️ Parkiranje" data-en="🅿️ Parking" data-ko="🅿️ 주차">🅿️ Parkiranje</span></p>
+    <div class="crash-list">
+      <div class="crash-card red-card">
+        <div class="crash-header">
+          <span class="crash-icon">⚠️</span>
+          <span class="crash-title"><span class="t" data-sl="PARKIRANJE — PLAČA ONA S KOREJSKO KARTICO 🇰🇷" data-en="PARKING — SHE PAYS WITH KOREAN CARD 🇰🇷" data-ko="주차 — 한국 카드로 결제 🇰🇷">PARKIRANJE — PLAČA ONA S KOREJSKO KARTICO 🇰🇷</span></span>
+        </div>
+        <div class="crash-body">
+          <span class="t" data-sl="Večina parkirišč v Koreji je" data-en="Most parking lots in Korea are" data-ko="한국 주차장 대부분은">Večina parkirišč v Koreji je</span> <strong class="t" data-sl="brezgotovinska in brez osebja" data-en="cashless and unattended" data-ko="무인 · 무현금">brezgotovinska in brez osebja</strong>. <span class="t" data-sl="Kamera prebere tablico, plačata pri kiosku ob izhodu." data-en="Camera reads the plate, pay at the kiosk on exit." data-ko="카메라가 번호판 인식, 출구 키오스크에서 결제.">Kamera prebere tablico, plačata pri kiosku ob izhodu.</span><br><br>
+          <span class="highlight">✅ <span class="t" data-sl="Ni problema!" data-en="No problem!" data-ko="문제없음!">Ni problema!</span></span> <span class="t" data-sl="Ona plača z" data-en="She pays with her" data-ko="한국 카드로 결제 —">Ona plača z</span> <strong class="t" data-sl="korejsko kartico" data-en="Korean card" data-ko="한국 카드">korejsko kartico</strong> — <span class="t" data-sl="vse deluje brez težav." data-en="everything works fine." data-ko="모두 정상 작동.">vse deluje brez težav.</span><br><br>
+          <span class="t" data-sl="Na Naver Maps poiščita" data-en="Search on Naver Maps for" data-ko="네이버 지도에서 검색">Na Naver Maps poiščita</span> <strong>주차장</strong> <span class="t" data-sl="v bližini destinacije za cene in lokacije." data-en="near your destination for prices and locations." data-ko="목적지 근처 주차장 가격·위치 확인.">v bližini destinacije za cene in lokacije.</span><br><br>
+          <strong class="t" data-sl="Okvirne cene:" data-en="Rough prices:" data-ko="대략 요금:">Okvirne cene:</strong> <span class="t" data-sl="center mesta ~1.000–2.000 KRW/uro · pri templjih ~2.000–3.000 KRW/uro" data-en="city center ~1,000–2,000 KRW/hr · at temples ~2,000–3,000 KRW/hr" data-ko="시내 ~1,000–2,000원/시간 · 사찰 ~2,000–3,000원/시간">center mesta ~1.000–2.000 KRW/uro · pri templjih ~2.000–3.000 KRW/uro</span></div>
+      </div>
+
+      <div class="crash-card green-card">
+        <div class="crash-header">
+          <span class="crash-icon">📱</span>
+          <span class="crash-title"><span class="t" data-sl="NAVER MAPS — TVOJ NAJBOLJŠI PRIJATELJ" data-en="NAVER MAPS — YOUR BEST FRIEND" data-ko="네이버 지도 — 최고의 친구">NAVER MAPS — TVOJ NAJBOLJŠI PRIJATELJ</span></span>
+        </div>
+        <div class="crash-body">
+          Naver Maps pokaže parkirišča, cene in ali sprejemajo kartice.<br>
+          Iščita: <span class="highlight">주차장</span> v bližini destinacije.<br><br>
+          <strong class="t" data-sl="Google Maps NE deluje za navigacijo v Koreji" data-en="Google Maps does NOT work for navigation in Korea" data-ko="구글 맵은 한국에서 내비게이션 불가">Google Maps NE deluje za navigacijo v Koreji</strong> — <span class="t" data-sl="zakonske omejitve." data-en="legal restrictions." data-ko="법적 제한.">zakonske omejitve.</span> Vedno Naver! 🗺️
+        </div>
+      </div>
+    </div>
+
+    <p class="section-heading px"><span class="t" data-sl="🛑 Prometna pravila Koreje" data-en="🛑 Korean Traffic Rules" data-ko="🛑 한국 교통 법규">🛑 Prometna pravila Koreje</span></p>
+
+    <div class="crash-list">
+
+      <!-- RED -->
+      <div class="crash-card red-card">
+        <div class="crash-header">
+          <span class="crash-icon">🛑</span>
+          <span class="crash-title"><span class="t" data-sl="RDEČA LUČ + DESNO: DEAD STOP" data-en="RED LIGHT + RIGHT TURN: DEAD STOP" data-ko="빨간불 + 우회전: 완전 정지">RDEČA LUČ + DESNO: DEAD STOP</span></span>
+        </div>
+        <div class="crash-body">
+          <span class="t" data-sl="Pred zebro je obvezen" data-en="Before the crosswalk, a" data-ko="횡단보도 앞">Pred zebro je obvezen</span> <strong class="t" data-sl="popolni STOP pred belo črto" data-en="full STOP before the white line" data-ko="정지선 앞 완전 정지">popolni STOP pred belo črto</strong> — <span class="t" data-sl="ne samo upočasnitev!" data-en="not just slowing down!" data-ko="감속이 아닌 완전 정지!">ne samo upočasnitev!</span><br><br>
+          <span class="t" data-sl="Če pešec stopa na zebro," data-en="If a pedestrian steps onto the crossing," data-ko="보행자가 횡단보도에 발을 내딛으면,">Če pešec stopa na zebro,</span> <strong class="t" data-sl="počakajta, dokler ne gre z OBEMA nogama na pločnik" data-en="wait until both feet are fully on the pavement" data-ko="두 발이 인도에 완전히 올라갈 때까지 기다리기">počakajta, dokler ne gre z OBEMA nogama na pločnik</strong>.<br><br>
+          <span class="highlight">💸 <span class="t" data-sl="Kazen: 60.000 KRW" data-en="Fine: 60,000 KRW" data-ko="벌금: 60,000원">Kazen: 60.000 KRW</span></span> — <span class="t" data-sl="rent-a-car zaračuna avtomatsko prek GPS-a." data-en="rent-a-car charges automatically via GPS." data-ko="렌터카가 GPS로 자동 청구.">rent-a-car zaračuna avtomatsko prek GPS-a.</span>
+        </div>
+      </div>
+
+      <!-- GREEN -->
+      <div class="crash-card green-card">
+        <div class="crash-header">
+          <span class="crash-icon">🟢</span>
+          <span class="crash-title"><span class="t" data-sl="LEVO (비보호 Biboho) — SAMO PRI ZELENI" data-en="LEFT TURN (비보호 Biboho) — GREEN LIGHT ONLY" data-ko="좌회전 (비보호) — 녹색 신호에만">LEVO (비보호 Biboho) — SAMO PRI ZELENI</span></span>
+        </div>
+        <div class="crash-body">
+          <span class="t" data-sl="Zavijanje levo je dovoljeno" data-en="Left turn is allowed" data-ko="좌회전 허용">Zavijanje levo je dovoljeno</span> <strong class="t" data-sl="SAMO pri zeleni luči" data-en="ONLY on green light" data-ko="녹색 신호에만">SAMO pri zeleni luči</strong> <span class="t" data-sl="in" data-en="and" data-ko="그리고">in</span> <strong class="t" data-sl="samo če je nasprotni promet popolnoma prazen" data-en="only if oncoming traffic is completely clear" data-ko="반대 차선이 완전히 비었을 때만">samo če je nasprotni promet popolnoma prazen</strong>.<br><br>
+          <span class="highlight">🚫 <span class="t" data-sl="Pri rdeči je STROGO PREPOVEDANO" data-en="STRICTLY FORBIDDEN on red" data-ko="빨간불 절대 금지">Pri rdeči je STROGO PREPOVEDANO</span></span> — <span class="t" data-sl="brez izjeme." data-en="no exceptions." data-ko="예외 없음.">brez izjeme.</span>
+        </div>
+      </div>
+
+      <!-- YELLOW — U-turn -->
+      <div class="crash-card yellow-card">
+        <div class="crash-header">
+          <span class="crash-icon">↩️</span>
+          <span class="crash-title"><span class="t" data-sl="U-TURN — SAMO PRI ZNAKU" data-en="U-TURN — ONLY WHERE SIGNED" data-ko="유턴 — 표지판 있는 곳만">U-TURN — SAMO PRI ZNAKU</span></span>
+        </div>
+        <div class="crash-body">
+          <span class="t" data-sl="Dovoljen le tam, kjer je" data-en="Only allowed where there is a" data-ko="허용 위치:">Dovoljen le tam, kjer je</span> <strong class="t" data-sl="modri znak z belo puščico ↩" data-en="blue sign with white arrow ↩" data-ko="흰 화살표 파란 표지판 ↩">modri znak z belo puščico ↩</strong> <span class="t" data-sl="in" data-en="and a" data-ko="그리고">in</span> <strong class="t" data-sl="debela prekinjena črta" data-en="thick dashed line" data-ko="굵은 점선">debela prekinjena črta</strong> <span class="t" data-sl="na cesti." data-en="on the road." data-ko="차도 위.">na cesti.</span><br><br>
+          <span class="highlight">🇰🇷 <span class="t" data-sl="Ona naj prevede korejski tekst" data-en="She should translate the Korean text" data-ko="표지판 아래 한국어 확인">Ona naj prevede korejski tekst</span></span> <span class="t" data-sl="pod znakom — pogosto je pogoj za obračanje (npr. samo ob rdeči)." data-en="under the sign — often there is a condition for the U-turn (e.g. only on red)." data-ko="표지판 아래 — 유턴 조건 있는 경우 많음 (예: 빨간불에만).">pod znakom — pogosto je pogoj za obračanje (npr. samo ob rdeči).</span><br><br>
+          ⚠️ <strong class="t" data-sl="Nasprotni promet, ki dela U-turn, ima prednost" data-en="Oncoming traffic making a U-turn has priority" data-ko="유턴 차량이 우선">Nasprotni promet, ki dela U-turn, ima prednost</strong> <span class="t" data-sl="pred vajinemu levemu zavijanju!" data-en="over your left turn!" data-ko="좌회전보다 우선!">pred vajinemu levemu zavijanju!</span>
+        </div>
+      </div>
+
+      <!-- YELLOW — omejitve -->
+      <div class="crash-card yellow-card">
+        <div class="crash-header">
+          <span class="crash-icon">⚠️</span>
+          <span class="crash-title"><span class="t" data-sl="OMEJITVE — NIČELNA TOLERANCA" data-en="SPEED LIMITS — ZERO TOLERANCE" data-ko="속도 제한 — 무관용">OMEJITVE — NIČELNA TOLERANCA</span></span>
+        </div>
+        <div class="crash-body">
+          <span class="highlight">🏫 30 km/h</span> — <span class="t" data-sl="šolske in stanovanjske cone (rumene ceste na Naver Maps)." data-en="school and residential zones (yellow roads on Naver Maps)." data-ko="학교·주거 지역 (네이버 지도 노란 도로).">šolske in stanovanjske cone (rumene ceste na Naver Maps).</span><br><br>
+          <strong class="t" data-sl="Ničelna toleranca!" data-en="Zero tolerance!" data-ko="무관용!">Ničelna toleranca!</strong> <span class="t" data-sl="Naver Map opozarja z glasovnim opozorilom — poslušajta ga!" data-en="Naver Maps warns with a voice alert — listen to it!" data-ko="네이버 지도 음성 경고 — 반드시 듣기!">Naver Map opozarja z glasovnim opozorilom — poslušajta ga!</span><br><br>
+          <span class="t" data-sl="Hitrosti se prilagajajo s kamerami — kazni pridejo po pošti na rent-a-car." data-en="Speed is monitored by cameras — fines arrive by post to the rental car company." data-ko="카메라로 단속 — 벌금 고지서가 렌터카 회사로 우편 발송.">Hitrosti se prilagajajo s kamerami — kazni pridejo po pošti na rent-a-car.</span>
+        </div>
+      </div>
+
+      <!-- BLUE — pasovi -->
+      <div class="crash-card blue-card">
+        <div class="crash-header">
+          <span class="crash-icon">🛣️</span>
+          <span class="crash-title"><span class="t" data-sl="PASOVI — DRŽI SE SREDINE" data-en="LANES — STAY IN THE MIDDLE" data-ko="차선 — 중앙차선 유지">PASOVI — DRŽI SE SREDINE</span></span>
+        </div>
+        <div class="crash-body">
+          <strong class="t" data-sl="Desni pas:" data-en="Right lane:" data-ko="우측 차선:">Desni pas:</strong> <span class="t" data-sl="rezerviran za avtobuse in taksije — ne voziti v mestih." data-en="reserved for buses and taxis — don't use in cities." data-ko="버스·택시 전용 — 시내에서 이용 금지.">rezerviran za avtobuse in taksije — ne voziti v mestih.</span><br><br>
+          <strong class="t" data-sl="Levi pas:" data-en="Left lane:" data-ko="좌측 차선:">Levi pas:</strong> <span class="t" data-sl="se hitro spremeni v" data-en="quickly becomes a" data-ko="곧 변함">se hitro spremeni v</span> <strong class="t" data-sl="pas za zavijanje levo" data-en="left turn lane" data-ko="좌회전 전용차선">pas za zavijanje levo</strong> — <span class="t" data-sl="bodita pozorna na talne oznake." data-en="watch the road markings." data-ko="노면 표시 주의.">bodita pozorna na talne oznake.</span><br><br>
+          <span class="highlight">✅ <span class="t" data-sl="Sredinski pas = varnost" data-en="Middle lane = safety" data-ko="중앙 차선 = 안전">Sredinski pas = varnost</span></span>
+        </div>
+      </div>
+
+    </div><!-- /.crash-list -->
+
+  </section>
+
+
+  <!-- ═══════════════════════════════════
+       PANEL 4 — VREME PODROBNO
+  ═══════════════════════════════════ -->
+  <section class="panel" id="panel-weather">
+
+    <!-- Search row -->
+    <div class="wx-search-row">
+      <input class="wx-input" id="wx-search-input" type="text"
+        placeholder="🔍 Išči kraj (npr. Pohang, Busan…)"
+        onkeydown="if(event.key==='Enter'){wxSearch()}"
+      />
+      <button class="wx-btn" onclick="wxSearch()">Išči</button>
+      <button class="wx-btn-gps" onclick="wxGPS()" title="Trenutna lokacija">📍</button>
+    </div>
+
+    <div id="wx-detail-body">
+      <div class="wx-loading">⏳ Nalaganje…</div>
+    </div>
+
+    <!-- ── RADAR ── -->
+    <div class="radar-wrap" id="radar-widget" style="margin-top:4px">
+      <div class="radar-header">
+        <span class="radar-title">📡 Radar padavin — v živo</span>
+        <div class="radar-controls">
+          <button class="radar-btn" id="radar-play-btn" onclick="radarToggle()">▶ Play</button>
+          <button class="radar-btn" onclick="radarRefresh()">↻</button>
+        </div>
+      </div>
+      <div id="radar-body">
+        <div class="radar-status">⏳ Nalaganje radarja…</div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ═══════════════════════════════════
+       PANEL 5 — MAPE
+  ═══════════════════════════════════ -->
+  <section class="panel" id="panel-maps">
+
+    <div class="maps-day-tabs">
+      <button class="maps-day-tab active" onclick="switchMapDay('fri', this)"><span class="t" data-sl="🌧️ Petek" data-en="🌧️ Friday" data-ko="🌧️ 금요일">🌧️ Petek</span></button>
+      <button class="maps-day-tab" onclick="switchMapDay('sat', this)"><span class="t" data-sl="🛕 Sobota" data-en="🛕 Saturday" data-ko="🛕 토요일">🛕 Sobota</span></button>
+      <button class="maps-day-tab" onclick="switchMapDay('sun', this)"><span class="t" data-sl="🚗 Nedelja" data-en="🚗 Sunday" data-ko="🚗 일요일">🚗 Nedelja</span></button>
+      <button class="maps-day-tab" onclick="switchMapDay('mon', this)"><span class="t" data-sl="☀️ Ponedeljek" data-en="☀️ Monday" data-ko="☀️ 월요일">☀️ Ponedeljek</span></button>
+    </div>
+
+    <!-- MAP CONTAINER -->
+    <div style="margin:0 12px 8px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);">
+      <div id="leaflet-map" style="height:320px;width:100%;background:#0a1a2e;"></div>
+    </div>
+
+    <!-- STOP LIST (scrollable below map) -->
+    <div id="map-stop-list" style="padding:0 12px 12px;"></div>
+
+  </section>
+
+  <footer class="footer">
+    🏯 Gyeongju 경주 · 19–22. junij 2026<br>
+    <span style="font-size:11px; margin-top:4px; display:block;">Varno vožnjo in dober izlet! 🍀</span>
+  </footer>
+
+  <script>
+    // ─── TAB SWITCHER ───
+    function switchTab(panelId, btn) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + panelId).classList.add('active');
+      btn.classList.add('active');
+      if (panelId === 'weather') {
+        if (!wxState.loaded) wxLoadLocation(wxState.lat, wxState.lon, wxState.name);
+        if (!radarState.loaded) radarInit();
+      }
+      if (panelId === 'maps') {
+        setTimeout(() => renderMapDay(currentMapDay), 100);
+      }
+    }
+
+    // ─── ACCORDION ───
+    function toggleDay(id) {
+      const item = document.getElementById(id);
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.day-item').forEach(d => d.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    }
+
+    // ─── WMO CODE → EMOJI ───
+    function wmoToEmoji(code, isDay) {
+      const d = isDay !== false;
+      if (code === 0)   return { e: d ? '☀️' : '🌙', t: 'Jasno' };
+      if (code <= 2)    return { e: '🌤️', t: 'Pretežno jasno' };
+      if (code === 3)   return { e: '☁️', t: 'Oblačno' };
+      if (code <= 49)   return { e: '🌫️', t: 'Megla' };
+      if (code <= 59)   return { e: '🌦️', t: 'Rosenje' };
+      if (code <= 69)   return { e: '🌧️', t: 'Dež' };
+      if (code <= 79)   return { e: '❄️', t: 'Sneg' };
+      if (code <= 82)   return { e: '🌧️', t: 'Plohe' };
+      if (code <= 84)   return { e: '🌨️', t: 'Snežne plohe' };
+      if (code <= 99)   return { e: '⛈️', t: 'Nevihta' };
+      return { e: '🌡️', t: 'Neznano' };
+    }
+
+    // ─── SUMMARY WIDGET ───
+    const TRIP_DAYS = ['Pet', 'Sob', 'Ned', 'Pon'];
+    const GJU_LAT = 35.8562, GJU_LON = 129.2247;
+
+    async function fetchWeather() {
+      const body = document.getElementById('weather-body');
+      body.innerHTML = '<div class="weather-loading">⏳ Nalaganje…</div>';
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${GJU_LAT}&longitude=${GJU_LON}` +
+          `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,windspeed_10m_max` +
+          `&current_weather=true&timezone=Asia%2FSeoul&forecast_days=7`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        renderWeather(await res.json());
+      } catch {
+        body.innerHTML = '<div class="weather-error">⚠️ Ni povezave.<br><small>Preverite internet.</small></div>';
+      }
+    }
+
+    function renderWeather(data) {
+      const body = document.getElementById('weather-body');
+      const { daily, current_weather } = data;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayIdx = daily.time.indexOf(todayStr);
+      const startIdx = todayIdx >= 0 ? todayIdx : 0;
+      const showDays = [];
+      for (let i = startIdx; i < startIdx + 4 && i < daily.time.length; i++) showDays.push(i);
+      const dayNames = ['Ned','Pon','Tor','Sre','Čet','Pet','Sob'];
+      let html = '<div class="weather-days">';
+      showDays.forEach((idx, pos) => {
+        const date = new Date(daily.time[idx] + 'T12:00:00');
+        const isToday = daily.time[idx] === todayStr;
+        const { e } = wmoToEmoji(daily.weathercode[idx], current_weather.is_day);
+        const hi = Math.round(daily.temperature_2m_max[idx]);
+        const lo = Math.round(daily.temperature_2m_min[idx]);
+        const rainPct = daily.precipitation_probability_max[idx] || 0;
+        const wind = Math.round(daily.windspeed_10m_max[idx]);
+        const dName = TRIP_DAYS[pos] || dayNames[date.getDay()];
+        html += `<div class="weather-day${isToday ? ' today' : ''}">
+          <div class="wd-name">${dName}</div>
+          <div class="wd-icon">${e}</div>
+          <div class="wd-temp">${hi}°</div>
+          <div class="wd-temp-low">${lo}°</div>
+          <div class="wd-rain">💧 ${rainPct}%</div>
+          <div class="wd-wind">💨 ${wind} km/h</div>
+        </div>`;
+      });
+      html += '</div>';
+      const ts = new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+      html += `<div class="weather-updated">Posodobljeno ob ${ts} · Open-Meteo</div>`;
+      body.innerHTML = html;
+    }
+
+    // ─── DETAIL WEATHER PANEL ───
+    const wxState = {
+      lat: GJU_LAT, lon: GJU_LON,
+      name: 'Gyeongju', loaded: false,
+      data: null, selectedDay: 0
+    };
+
+    async function wxSearch() {
+      const q = document.getElementById('wx-search-input').value.trim();
+      if (!q) return;
+      wxShowLoading('🔍 Iščem kraj…');
+      try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=sl&format=json`);
+        const data = await res.json();
+        if (!data.results || !data.results.length) {
+          wxShowError('❌ Kraj ni najden. Poskusi z angleškim imenom.');
+          return;
+        }
+        const r = data.results[0];
+        wxState.lat = r.latitude;
+        wxState.lon = r.longitude;
+        wxState.name = r.name + (r.country ? ', ' + r.country : '');
+        wxState.selectedDay = 0;
+        radarState.lat = r.latitude;
+        radarState.lon = r.longitude;
+        radarState.loaded = false;
+        await wxLoadLocation(wxState.lat, wxState.lon, wxState.name);
+        radarInit();
+      } catch {
+        wxShowError('⚠️ Napaka pri iskanju. Preveri internet.');
+      }
+    }
+
+    function wxGPS() {
+      if (!navigator.geolocation) { wxShowError('❌ GPS ni na voljo.'); return; }
+      wxShowLoading('📍 Pridobivanje lokacije…');
+      navigator.geolocation.getCurrentPosition(
+        async pos => {
+          wxState.lat = radarState.lat = pos.coords.latitude;
+          wxState.lon = radarState.lon = pos.coords.longitude;
+          wxState.name = 'Moja lokacija 📍';
+          wxState.selectedDay = 0;
+          radarState.loaded = false;
+          await wxLoadLocation(wxState.lat, wxState.lon, wxState.name);
+          radarInit();
+        },
+        () => wxShowError('❌ GPS zavrnjen. Dovoli dostop v nastavitvah.'),
+        { timeout: 10000 }
+      );
+    }
+
+    function wxShowLoading(msg) {
+      document.getElementById('wx-detail-body').innerHTML = `<div class="wx-loading">${msg}</div>`;
+    }
+    function wxShowError(msg) {
+      document.getElementById('wx-detail-body').innerHTML = `<div class="wx-error">${msg}</div>`;
+    }
+
+    async function wxLoadLocation(lat, lon, name) {
+      wxShowLoading('⏳ Nalaganje napovedi…');
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&hourly=temperature_2m,precipitation_probability,precipitation,weathercode,windspeed_10m,is_day` +
+          `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,windspeed_10m_max` +
+          `&current_weather=true&timezone=auto&forecast_days=5`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error();
+        wxState.data = await res.json();
+        wxState.loaded = true;
+        wxRender();
+      } catch {
+        wxShowError('⚠️ Napake pri nalaganju. Preveri internet.');
+      }
+    }
+
+    function wxRender() {
+      const data = wxState.data;
+      if (!data) return;
+      const { hourly, daily, current_weather } = data;
+      const body = document.getElementById('wx-detail-body');
+      const curTemp = Math.round(current_weather.temperature);
+      const curWind = Math.round(current_weather.windspeed);
+      const isDay = current_weather.is_day;
+      const { e: curIcon, t: curDesc } = wmoToEmoji(current_weather.weathercode, isDay);
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayIdx = daily.time.indexOf(todayStr);
+      const di = todayIdx >= 0 ? todayIdx : 0;
+      const selIdx = wxState.selectedDay;
+      const dayNames = ['Ned','Pon','Tor','Sre','Čet','Pet','Sob'];
+
+      let html = '';
+      html += `<div class="wx-location-name">${wxState.name}</div>`;
+      html += `<div class="wx-location-sub">📡 Open-Meteo · ${new Date().toLocaleTimeString('sl-SI', {hour:'2-digit',minute:'2-digit'})}</div>`;
+      html += `<div class="wx-current">
+        <div class="wx-cur-icon">${curIcon}</div>
+        <div>
+          <div class="wx-cur-temp">${curTemp}°C</div>
+          <div class="wx-cur-desc">${curDesc}</div>
+          <div class="wx-cur-meta">💨 ${curWind} km/h &nbsp;|&nbsp; 📅 ${daily.temperature_2m_min[di]}°–${daily.temperature_2m_max[di]}°</div>
+        </div>
+      </div>`;
+
+      html += '<div class="wx-day-tabs">';
+      daily.time.forEach((d, i) => {
+        const date = new Date(d + 'T12:00:00');
+        const isT = d === todayStr;
+        const { e: de } = wmoToEmoji(daily.weathercode[i], true);
+        const label = isT ? `Danes ${de}` : `${dayNames[date.getDay()]} ${de}`;
+        html += `<button class="wx-day-tab${i === selIdx ? ' active' : ''}" onclick="wxSelectDay(${i})">${label}</button>`;
+      });
+      html += '</div>';
+
+      const selDate = daily.time[selIdx];
+      const hourStart = hourly.time.findIndex(t => t.startsWith(selDate));
+      const nowHour = new Date().getHours();
+
+      // Hourly rain bar chart (compact SVG)
+      const hrs = [];
+      for (let h = hourStart; h < Math.min(hourStart + 24, hourly.time.length); h++) {
+        hrs.push({
+          t: hourly.time[h].slice(11, 16),
+          n: parseInt(hourly.time[h].slice(11, 13)),
+          icon: wmoToEmoji(hourly.weathercode[h], hourly.is_day[h]).e,
+          temp: Math.round(hourly.temperature_2m[h]),
+          pct: hourly.precipitation_probability[h] || 0,
+          mm: (hourly.precipitation[h] || 0).toFixed(1),
+          isNow: selDate === todayStr && parseInt(hourly.time[h].slice(11,13)) === nowHour
+        });
+      }
+
+      // SVG rain chart
+      const svgW = hrs.length * 22;
+      const maxH = 44;
+      let svgBars = '';
+      let svgLabels = '';
+      hrs.forEach((h, i) => {
+        const x = i * 22 + 4;
+        const barH = Math.max(2, Math.round(h.pct / 100 * maxH));
+        const col = h.pct > 70 ? '#FF5B5B' : h.pct > 40 ? '#FFD166' : '#7EB8D4';
+        const op = h.pct > 0 ? '0.85' : '0.3';
+        const isNow = h.isNow;
+        svgBars += `<rect x="${x}" y="${maxH - barH + 2}" width="14" height="${barH}" rx="2" fill="${isNow ? '#fff' : col}" opacity="${isNow ? 1 : op}"/>`;
+        if (h.n % 3 === 0) svgLabels += `<text x="${x + 7}" y="${maxH + 16}" text-anchor="middle" font-size="8" fill="#7A8FA3">${h.t.slice(0,2)}</text>`;
+        if (h.pct >= 40) svgLabels += `<text x="${x + 7}" y="${maxH - barH - 2}" text-anchor="middle" font-size="8" fill="${col}">${h.pct}</text>`;
+      });
+
+      html += `<div class="wx-rain-chart">
+        <div class="wx-rain-chart-title">💧 Dež po urah — ${selDate}</div>
+        <div style="overflow-x:auto;padding:8px 14px 4px;scrollbar-width:none">
+          <svg width="${Math.max(svgW, 280)}" height="${maxH + 24}" style="display:block">
+            ${svgBars}${svgLabels}
+          </svg>
+        </div>
+      </div>`;
+
+      // Hourly cards
+      html += `<div class="wx-hourly-wrap">
+        <div class="wx-hourly-title">🕐 Po urah — ${selDate}</div>
+        <div class="wx-hourly-scroll"><div class="wx-hourly-inner">`;
+      hrs.forEach(h => {
+        const col = h.pct > 70 ? '#FF5B5B' : h.pct > 40 ? '#FFD166' : '#7EB8D4';
+        html += `<div class="wx-hour${h.isNow ? ' now' : ''}">
+          <div class="wx-hour-time">${h.isNow ? '🔴' : h.t}</div>
+          <div class="wx-hour-icon">${h.icon}</div>
+          <div class="wx-hour-temp">${h.temp}°</div>
+          <div class="wx-hour-rain" style="color:${col}">${h.pct}%</div>
+          <div class="wx-hour-mm">${h.mm}mm</div>
+        </div>`;
+      });
+      html += `</div></div></div>`;
+      html += `<div class="wx-updated">Open-Meteo · brez API ključa 🔓</div>`;
+      body.innerHTML = html;
+    }
+
+    function wxSelectDay(idx) {
+      wxState.selectedDay = idx;
+      wxRender();
+      setTimeout(() => { const s = document.querySelector('.wx-hourly-scroll'); if(s) s.scrollLeft=0; }, 50);
+    }
+
+    // ═══════════════════════════════════
+    //  RADAR ENGINE — RainViewer API
+    // ═══════════════════════════════════
+    const radarState = {
+      lat: GJU_LAT, lon: GJU_LON,
+      frames: [], frameIdx: 0,
+      playing: false, timer: null,
+      loaded: false, canvas: null, ctx: null,
+      tileCache: {}
+    };
+
+    // Tile math (Web Mercator)
+    function latLonToTile(lat, lon, zoom) {
+      const n = Math.pow(2, zoom);
+      const x = Math.floor((lon + 180) / 360 * n);
+      const latR = lat * Math.PI / 180;
+      const y = Math.floor((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n);
+      return { x, y };
+    }
+    function tileToLatLon(x, y, zoom) {
+      const n = Math.pow(2, zoom);
+      const lon = x / n * 360 - 180;
+      const latR = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n)));
+      return { lat: latR * 180 / Math.PI, lon };
+    }
+
+    async function radarInit() {
+      const body = document.getElementById('radar-body');
+      body.innerHTML = '<div class="radar-status">📡 Nalaganje radarskih podatkov…</div>';
+      try {
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        const data = await res.json();
+        radarState.frames = [...(data.radar.past || []), ...(data.radar.nowcast || [])].slice(-12);
+        if (!radarState.frames.length) throw new Error('no frames');
+        radarState.frameIdx = radarState.frames.length - 1; // start at latest
+        radarState.loaded = true;
+        radarState.tileCache = {};
+        renderRadarWidget(body);
+        await drawRadarFrame();
+      } catch(e) {
+        body.innerHTML = '<div class="radar-status">⚠️ Radar ni na voljo.<br><small>Preveri internet.</small></div>';
+      }
+    }
+
+    function renderRadarWidget(body) {
+      const n = radarState.frames.length;
+      let ticks = '';
+      for (let i = 0; i < n; i++) ticks += `<div class="radar-frame-tick${i === radarState.frameIdx ? ' active' : ''}" id="rtick-${i}"></div>`;
+
+      body.innerHTML = `
+        <div class="radar-canvas-wrap">
+          <canvas id="radar-canvas"></canvas>
+          <div class="radar-overlay-dot" id="radar-dot" style="left:50%;top:50%"></div>
+          <div class="radar-time-label" id="radar-time">–</div>
+        </div>
+        <div class="radar-frame-bar">${ticks}</div>
+        <div class="radar-legend">
+          <span class="radar-legend-title">mm/h:</span>
+          <span class="radar-legend-item"><span class="radar-legend-dot" style="background:#4CC9A0"></span>0.1</span>
+          <span class="radar-legend-item"><span class="radar-legend-dot" style="background:#7EB8D4"></span>0.5</span>
+          <span class="radar-legend-item"><span class="radar-legend-dot" style="background:#FFD166"></span>2</span>
+          <span class="radar-legend-item"><span class="radar-legend-dot" style="background:#FF5B5B"></span>10</span>
+          <span class="radar-legend-item"><span class="radar-legend-dot" style="background:#9B59B6"></span>50+</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--accent-dim)">RainViewer</span>
+        </div>`;
+
+      radarState.canvas = document.getElementById('radar-canvas');
+    }
+
+    async function drawRadarFrame() {
+      const canvas = document.getElementById('radar-canvas');
+      if (!canvas) return;
+      const wrap = canvas.parentElement;
+      const W = wrap.clientWidth || 360;
+      const H = Math.round(W * 0.7);
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0a1a2e';
+      ctx.fillRect(0, 0, W, H);
+
+      const zoom = 9;
+      const centerTile = latLonToTile(radarState.lat, radarState.lon, zoom);
+      const TILE = 256;
+      const tilesX = Math.ceil(W / TILE) + 1;
+      const tilesY = Math.ceil(H / TILE) + 1;
+
+      // Pixel offset of center tile
+      const centerTileOriginX = Math.floor(W / 2) - TILE / 2;
+      const centerTileOriginY = Math.floor(H / 2) - TILE / 2;
+
+      // Draw OSM base tiles (dark)
+      const baseDraws = [];
+      for (let dx = -Math.floor(tilesX/2); dx <= Math.floor(tilesX/2); dx++) {
+        for (let dy = -Math.floor(tilesY/2); dy <= Math.floor(tilesY/2); dy++) {
+          const tx = centerTile.x + dx;
+          const ty = centerTile.y + dy;
+          const px = centerTileOriginX + dx * TILE;
+          const py = centerTileOriginY + dy * TILE;
+          baseDraws.push({ tx, ty, px, py });
+        }
+      }
+
+      // Load & draw base map tiles
+      await Promise.all(baseDraws.map(({ tx, ty, px, py }) =>
+        loadTile(`https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`, ctx, px, py, TILE, true)
+          .catch(() => {})
+      ));
+
+      // Draw radar overlay tiles
+      const frame = radarState.frames[radarState.frameIdx];
+      if (frame) {
+        ctx.globalAlpha = 0.75;
+        await Promise.all(baseDraws.map(({ tx, ty, px, py }) => {
+          const url = `https://tilecache.rainviewer.com${frame.path}/256/${zoom}/${tx}/${ty}/2/1_1.png`;
+          return loadTile(url, ctx, px, py, TILE, false).catch(() => {});
+        }));
+        ctx.globalAlpha = 1.0;
+
+        // Time label
+        const el = document.getElementById('radar-time');
+        if (el) {
+          const d = new Date(frame.time * 1000);
+          const isNowcast = frame.time > Date.now() / 1000;
+          const label = d.toLocaleTimeString('sl-SI', {hour:'2-digit',minute:'2-digit'}) + (isNowcast ? ' 🔮' : ' 📡');
+          el.textContent = label;
+        }
+      }
+
+      // Update tick bar
+      radarState.frames.forEach((_, i) => {
+        const t = document.getElementById(`rtick-${i}`);
+        if (t) t.className = `radar-frame-tick${i === radarState.frameIdx ? ' active' : ''}`;
+      });
+
+      // Marker stays centered
+      const dot = document.getElementById('radar-dot');
+      if (dot) { dot.style.left = '50%'; dot.style.top = '50%'; }
+    }
+
+    function loadTile(url, ctx, px, py, size, darken) {
+      const cacheKey = url;
+      return new Promise((resolve, reject) => {
+        if (radarState.tileCache[cacheKey]) {
+          const img = radarState.tileCache[cacheKey];
+          if (darken) { ctx.filter = 'brightness(0.35) saturate(0.4)'; }
+          ctx.drawImage(img, px, py, size, size);
+          ctx.filter = 'none';
+          return resolve();
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          radarState.tileCache[cacheKey] = img;
+          if (darken) { ctx.filter = 'brightness(0.35) saturate(0.4)'; }
+          ctx.drawImage(img, px, py, size, size);
+          ctx.filter = 'none';
+          resolve();
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    function radarToggle() {
+      if (radarState.playing) {
+        clearInterval(radarState.timer);
+        radarState.playing = false;
+        const btn = document.getElementById('radar-play-btn');
+        if (btn) btn.textContent = '▶ Play';
+      } else {
+        radarState.playing = true;
+        const btn = document.getElementById('radar-play-btn');
+        if (btn) btn.textContent = '⏸ Stop';
+        radarState.timer = setInterval(async () => {
+          radarState.frameIdx = (radarState.frameIdx + 1) % radarState.frames.length;
+          await drawRadarFrame();
+        }, 700);
+      }
+    }
+
+    async function radarRefresh() {
+      if (radarState.playing) radarToggle();
+      radarState.loaded = false;
+      radarState.tileCache = {};
+      await radarInit();
+    }
+
+    // ─── LEAFLET MAP ───
+    const DAYS = {
+      fri: {
+        label: '<span class="t" data-sl="🌧️ Petek 19.6. — Peš zanka" data-en="🌧️ Friday 19.6. — Walking Loop" data-ko="🌧️ 금요일 19.6. — 도보 코스">🌧️ Petek 19.6. — Peš zanka</span>',
+        summary: { km: '~6 km walk', time: '~8 hrs' },
+        color: '#7EB8D4',
+        center: [35.8340, 129.2155],
+        zoom: 15,
+        stops: [
+          { icon: '🏨', name: 'Aventa Hotel', meta: '13:00 · Start', lat: 35.84066, lng: 129.20304, naver: 'https://naver.me/xrzjojg1' },
+          { travel: '🚶 11 min · 0.9 km' },
+          { icon: '⛰️', name: 'Daereungwon', meta: '13:00–14:30 · 3.000 KRW', lat: 35.8381, lng: 129.2108, naver: 'https://naver.me/x3jFNE36' },
+          { travel: '🚶 10 min · 0.7 km' },
+          { icon: '🔭', name: 'Cheomseongdae', meta: '14:30–15:15 · Brezplačno', lat: 35.8347, lng: 129.2190, naver: 'https://naver.me/GJTiv7JT' },
+          { travel: '🚶 5 min · 0.4 km' },
+          { icon: '🌳', name: 'Gyerim gozd', meta: '15:15–15:45 · Brezplačno', lat: 35.8322, lng: 129.2173, naver: 'https://naver.me/GTnqmBkn' },
+          { travel: '🚶 5 min · 0.4 km' },
+          { icon: '🏘️', name: 'Gyochon Hanok Village', meta: '15:45–16:45 · Brezplačno', lat: 35.8295, lng: 129.2148, naver: 'https://naver.me/54Lb57cn' },
+          { travel: '🚶 2 min · 0.2 km' },
+          { icon: '🌉', name: 'Woljeonggyo most', meta: '16:45–17:15 · Brezplačno', lat: 35.8292, lng: 129.2181, naver: 'https://naver.me/FG7xnCs8' },
+          { travel: '🚶 5 min · 0.4 km' },
+          { icon: '☕', name: 'Hwangridan-gil', meta: '17:15–18:00 · Kavarna', lat: 35.8377, lng: 129.2097, naver: 'https://naver.me/GUwSCIgn' },
+          { travel: '🚶 8 min · 0.6 km' },
+          { icon: '🏛️', name: 'Narodni muzej', meta: '19:30–21:00 · Brezplačno', lat: 35.8294, lng: 129.2279, naver: 'https://naver.me/GCvq6Suj' },
+          { travel: '🚗/🚶 15 min' },
+          { icon: '🏮', name: 'Donggung Palace ✨', meta: '21:00+ · 3.000 KRW (opcijsko)', lat: 35.8348, lng: 129.2266, naver: 'https://naver.me/5FmSoI8P' },
+        ]
+      },
+      sat: {
+        label: '<span class="t" data-sl="🛕 Sobota 20.6. — Bulguksa & Gyeongju" data-en="🛕 Saturday 20.6. — Bulguksa & Gyeongju" data-ko="🛕 토요일 20.6. — 불국사 & 경주">🛕 Sobota 20.6. — Bulguksa & Gyeongju</span>',
+        summary: { km: '~60 km by car', time: '~12 hrs' },
+        color: '#FF5B5B',
+        center: [35.820, 129.240],
+        zoom: 12,
+        stops: [
+          { icon: '🗝️', name: 'Lotte Rent-a-Car', meta: '09:30 · Singyeongju', lat: 35.8194, lng: 129.1470, naver: 'https://naver.me/x5GoLs7a' },
+          { travel: '🚗 20 min · 18 km' },
+          { icon: '🛕', name: 'Bulguksa Temple', meta: '10:00–13:00 · 6.000 KRW', lat: 35.7899, lng: 129.3319, naver: 'https://naver.me/xzxmFxTH' },
+          { travel: '🚗 9 km po cesti · 15 min' },
+          { icon: '🪨', name: 'Seokguram Grotto', meta: '13:00–14:30 · 6.000 KRW', lat: 35.7952, lng: 129.3504, naver: 'https://naver.me/GYC92L82' },
+          { travel: '🚗 15 min · 9 km' },
+          { icon: '🍜', name: 'Kosilo pri Bulguksi', meta: '14:30–15:30 · Restavracije pri vhodu', lat: 35.7910, lng: 129.3310, naver: null },
+          { travel: '🚗 20 min · 18 km' },
+          { icon: '⛰️', name: 'Daereungwon — z avtom', meta: '15:30–17:00 · 3.000 KRW', lat: 35.8381, lng: 129.2108, naver: 'https://naver.me/x3jFNE36' },
+          { travel: '🚗 5 min' },
+          { icon: '🏨', name: 'Hotel — počitek', meta: '~17:30 · Tuš in počitek', lat: 35.8407, lng: 129.2030, naver: null },
+          { travel: '🚗/🚶 5–15 min' },
+          { icon: '🏮', name: 'Donggung Palace ✨', meta: '20:00–22:00 · 3.000 KRW', lat: 35.8348, lng: 129.2266, naver: 'https://naver.me/5FmSoI8P' },
+        ]
+      },
+      sun: {
+        label: '<span class="t" data-sl="🚗 Nedelja 21.6. — Gampo → Pohang" data-en="🚗 Sunday 21.6. — Gampo → Pohang" data-ko="🚗 일요일 21.6. — 감포 → 포항">🚗 Nedelja 21.6. — Gampo → Pohang</span>',
+        summary: { km: '~115 km by car', time: '~9.5 hrs' },
+        color: '#4CC9A0',
+        center: [35.93, 129.38],
+        zoom: 11,
+        stops: [
+          { icon: '🏨', name: 'Aventa Hotel', meta: '08:30 · Start', lat: 35.8407, lng: 129.2030, naver: 'https://naver.me/xrzjojg1' },
+          { travel: '🚗 25 min · 22 km' },
+          { icon: '🦁', name: 'Jeonchon Dragon Cave', meta: '09:00–10:15 · Parkiraj pri pristanišču', lat: 35.8087, lng: 129.5066, naver: 'https://map.naver.com/p/entry/place/1700850236?placePath=%2Fhome' },
+          { travel: '🚗 ~10 min (opcijsko)' },
+          { icon: '⛩️', name: 'Gameunsa Temple ✨', meta: 'Opcijsko · Brezplačno · 10 min', lat: 35.8060, lng: 129.4760, naver: 'https://map.naver.com/p/entry/place/15772342?placePath=%2Fhome' },
+          { travel: '🚗 15 min · 12 km' },
+          { icon: '🪨', name: 'Yangnam Columnar Joints', meta: '10:15–11:00 · Parkiraj pri 어시장', lat: 35.6861, lng: 129.4742, naver: 'https://naver.me/xKEqnG5n' },
+          { travel: '🚗 5 min · 3 km' },
+          { icon: '☕', name: '1925 Gampo Café', meta: '11:00–12:00 · Odprto ob ned. ✅', lat: 35.6990, lng: 129.4800, naver: 'https://map.naver.com/p/entry/place/1980775144?placePath=%2Fhome' },
+          { travel: '🚗 30 min · 28 km' },
+          { icon: '🐟', name: 'Jukdo Market Pohang', meta: '12:00–13:30 · Mulhoe + sashimi', lat: 36.0364, lng: 129.3684, naver: 'https://map.naver.com/p/entry/place/1068655821?placePath=%2Fhome' },
+          { travel: '🚗 10 min · 7 km' },
+          { icon: '🏖️', name: 'Yeongildae Beach', meta: '13:30–14:30 · ☀️ Sončno', lat: 36.0561, lng: 129.3781, naver: 'https://map.naver.com/p/entry/place/21176659?placePath=%2Fhome' },
+          { travel: '🚶 10 min · 0.8 km' },
+          { icon: '🎡', name: 'SpaceWalk', meta: '14:30–15:30 · Brezplačno', lat: 36.0652, lng: 129.3903, naver: 'https://naver.me/IDFUxVu0' },
+          { travel: '🚗 45 min · 42 km' },
+          { icon: '🍽️', name: 'Večerja — Gyeongju', meta: '~18:00 · 0% dež · Prvič brez dežja! 🌙', lat: 35.8377, lng: 129.2097, naver: null },
+        ]
+      },
+      mon: {
+        label: '<span class="t" data-sl="☀️ Ponedeljek 22.6. — Zadnji dan" data-en="☀️ Monday 22.6. — Last day" data-ko="☀️ 월요일 22.6. — 마지막 날">☀️ Ponedeljek 22.6. — Zadnji dan</span>',
+        summary: { km: '~30 km by car', time: '~9 hrs' },
+        color: '#FFD166',
+        center: [35.835, 129.245],
+        zoom: 12,
+        stops: [
+          { icon: '🏨', name: 'Aventa Hotel — prtljaga v avto!', meta: '09:00 · Prtljaga gre v avto, ni vračanja 👌', lat: 35.8407, lng: 129.2030, naver: 'https://naver.me/xrzjojg1' },
+          { travel: '🚗 12 min · 6.9 km' },
+          { icon: '🏞️', name: 'Bomun Lake Resort', meta: '09:15–11:00 · Vožnja okoli jezera', lat: 35.8428, lng: 129.2858, naver: 'https://naver.me/FEgWIIFo' },
+          { travel: '🚗 5 min · 3 km' },
+          { icon: '🗼', name: 'Gyeongju Tower', meta: '11:00–12:15 · 82m razgled · 10:00–18:00', lat: 35.8313, lng: 129.2894, naver: 'https://naver.me/5Xc8YyHc' },
+          { travel: '🚗 5 min' },
+          { icon: '🍽️', name: 'Kosilo ob Expo parku', meta: '12:15–13:15 · Zadnje korejsko kosilo 🥢', lat: 35.8310, lng: 129.2880, naver: null },
+          { travel: '🚗 10 min · 5 km' },
+          { icon: '🏔️', name: 'Namsan — Samneung Valley', meta: '13:30–15:30 · Parkiraj pri Sambulsa parking', lat: 35.8050, lng: 129.2150, naver: 'https://naver.me/x2YsOlQn' },
+          { travel: '🚗 8 min (opcijsko)' },
+          { icon: '🏘️', name: '<span class="t" data-sl="Gyochon + Woljeonggyo 🔁" data-en="Gyochon + Woljeonggyo 🔁" data-ko="교촌 + 월정교 🔁">Gyochon + Woljeonggyo 🔁</span>', meta: '~15:30 · Samo če nista videla v petek', lat: 35.8295, lng: 129.2148, naver: 'https://naver.me/54Lb57cn' },
+          { travel: '🚗 5 min · 2 km' },
+          { icon: '🚗', name: 'Lotte Rent-a-Car — vračilo', meta: '17:30 · Pridi 30 min prej za pregled', lat: 35.8194, lng: 129.1470, naver: 'https://naver.me/x5GoLs7a' },
+          { travel: '🚕 5 min do postaje' },
+          { icon: '🚆', name: 'KTX 126 → Suwon', meta: '18:25 → 20:34 · Nasvidenje! 👋', lat: 35.7984, lng: 129.1390, naver: 'https://naver.me/5CrP626R' },
+        ]
+      }
+    };
+
+    let leafletMap = null;
+    let currentMapDay = 'fri';
+
+    function switchMapDay(day, btn) {
+      document.querySelectorAll('.maps-day-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMapDay = day;
+      renderMapDay(day);
+    }
+
+    function renderMapDay(day) {
+      const d = DAYS[day];
+      if (!d) return;
+
+      // Render stop list
+      const listEl = document.getElementById('map-stop-list');
+      let html = `<div class="lf-day-summary"><span>${d.label}</span><strong>📍 ${d.summary.km}</strong></div>`;
+      d.stops.forEach(s => {
+        if (s.travel) {
+          html += `<div class="lf-travel-card"><span style="color:var(--accent)">→</span><span>${s.travel}</span></div>`;
+        } else {
+          const href = s.naver ? `href="${s.naver}" target="_blank" rel="noopener"` : '';
+          const tag = s.naver ? 'a' : 'div';
+          html += `<${tag} class="lf-stop-card" ${href} onclick="focusStop(${s.lat},${s.lng},'${(s.name||'').replace(/'/g,"\'")}','${s.meta||''}','${s.naver||''}')">
+            <span class="lf-stop-icon">${s.icon}</span>
+            <div class="lf-stop-info">
+              <div class="lf-stop-name">${s.name}</div>
+              <div class="lf-stop-meta">${s.meta}</div>
+            </div>
+            ${s.naver ? '<span class="lf-stop-arrow">↗</span>' : ''}
+          </${tag}>`;
+        }
+      });
+      listEl.innerHTML = html;
+
+      // Init or update Leaflet map
+      if (!leafletMap) {
+        leafletMap = L.map('leaflet-map', { zoomControl: true, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18, opacity: 1
+        }).addTo(leafletMap);
+      }
+
+      // Clear existing layers
+      leafletMap.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) leafletMap.removeLayer(l); });
+
+      // Add markers and route
+      const pts = [];
+      let num = 0;
+      d.stops.forEach(s => {
+        if (s.lat) {
+          num++;
+          const col = d.color;
+          const icon = L.divIcon({
+            html: `<div style="width:30px;height:30px;border-radius:50%;background:${col};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.5)">${s.icon}</div>`,
+            className: '',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            popupAnchor: [0, -18]
+          });
+          const marker = L.marker([s.lat, s.lng], { icon }).addTo(leafletMap);
+          const popupContent = `<div class="lf-popup-name">${s.icon} ${s.name}</div>
+            <div class="lf-popup-time">${s.meta}</div>
+            ${s.naver ? `<a class="lf-popup-btn" href="${s.naver}" target="_blank">↗ Odpri Naver Maps</a>` : ''}`;
+          marker.bindPopup(popupContent, { maxWidth: 220 });
+          pts.push([s.lat, s.lng]);
+        }
+      });
+
+      // Draw route line
+      if (pts.length > 1) {
+        L.polyline(pts, { color: d.color, weight: 3, opacity: 0.7, dashArray: '6,4' }).addTo(leafletMap);
+      }
+
+      // Fit map to bounds
+      if (pts.length) {
+        leafletMap.fitBounds(pts, { padding: [30, 30] });
+      }
+    }
+
+    function focusStop(lat, lng, name, meta, naver) {
+      if (!leafletMap || !lat) return;
+      leafletMap.setView([lat, lng], 16, { animate: true });
+      // scroll to map
+      document.getElementById('leaflet-map').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ─── LANGUAGE SWITCHER ───
+    let currentLang = 'en';
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+      document.querySelectorAll('.t').forEach(el => {
+        const text = el.getAttribute('data-' + lang) || el.getAttribute('data-sl');
+        if (text) el.innerHTML = text;
+      });
+      // Update html lang attribute
+      document.documentElement.lang = lang === 'ko' ? 'ko' : lang === 'sl' ? 'sl' : 'en';
+    }
+
+    // ─── INIT ───
+    document.addEventListener('DOMContentLoaded', () => {
+      toggleDay('day-fri');
+      setLang('en');
+      fetchWeather();
+      // Pre-render map stop list
+      setTimeout(() => renderMapDay('fri'), 500);
+      setInterval(fetchWeather, 30 * 60 * 1000);
+      wxLoadLocation(GJU_LAT, GJU_LON, 'Gyeongju, Koreja');
+      radarInit();
+    });
+  </script>
+
+</body>
+</html>
