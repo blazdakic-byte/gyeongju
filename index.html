@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>🏯 Gyeongju – Vikend Izlet</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     /* ─── TOKENS ─── */
     :root {
@@ -2029,7 +2027,12 @@
 
     <!-- MAP CONTAINER -->
     <div style="margin:0 12px 8px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);">
-      <div id="leaflet-map" style="height:320px;width:100%;background:#0a1a2e;"></div>
+      <div id="leaflet-map" style="height:120px;width:100%;background:#0a1a2e;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);">
+        <div style="text-align:center;color:var(--muted);font-size:13px;">
+          🗺️ <span class="t" data-sl="Zemljevid zahteva internet" data-en="Map requires internet connection" data-ko="지도는 인터넷 필요">Map requires internet connection</span><br>
+          <small style="font-size:11px;margin-top:4px;display:block;color:var(--accent-dim)">Naver Maps links below ↓</small>
+        </div>
+      </div>
     </div>
 
     <!-- STOP LIST (scrollable below map) -->
@@ -2051,7 +2054,7 @@
       btn.classList.add('active');
       if (panelId === 'weather') {
         if (!wxState.loaded) wxLoadLocation(wxState.lat, wxState.lon, wxState.name);
-        if (!radarState.loaded) { try { radarInit(); } catch(e) {} }
+        if (!radarState.loaded) { try { radarInit(); } catch(e) { document.getElementById('radar-body').innerHTML='<div class="radar-status">📡 <span class="t" data-sl="Radar zahteva internet" data-en="Radar requires internet" data-ko="레이더는 인터넷 필요">Radar requires internet</span></div>'; } }
       }
       if (panelId === 'maps') {
         setTimeout(() => renderMapDay(currentMapDay), 100);
@@ -2629,7 +2632,6 @@
       }
     };
 
-    let leafletMap = null;
     let currentMapDay = 'fri';
 
     function switchMapDay(day, btn) {
@@ -2644,8 +2646,7 @@
     function renderMapDay(day) {
       const d = DAYS[day];
       if (!d) return;
-
-      // Render stop list
+      const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
       const listEl = document.getElementById('map-stop-list');
       let html = `<div class="lf-day-summary"><span>${d.label}</span><strong>📍 ${d.summary.km}</strong></div>`;
       d.stops.forEach(s => {
@@ -2654,7 +2655,7 @@
         } else {
           const href = s.naver ? `href="${s.naver}" target="_blank" rel="noopener"` : '';
           const tag = s.naver ? 'a' : 'div';
-          html += `<${tag} class="lf-stop-card" ${href} onclick="focusStop(${s.lat},${s.lng},'${(s.name||'').replace(/'/g,"\'")}','${s.meta||''}','${s.naver||''}')">
+          html += `<${tag} class="lf-stop-card" ${href}>
             <span class="lf-stop-icon">${s.icon}</span>
             <div class="lf-stop-info">
               <div class="lf-stop-name">${s.name}</div>
@@ -2665,58 +2666,6 @@
         }
       });
       listEl.innerHTML = html;
-
-      // Init or update Leaflet map
-      if (!leafletMap) {
-        if (typeof L === 'undefined') throw new Error('Leaflet not loaded');
-        leafletMap = L.map('leaflet-map', { zoomControl: true, attributionControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 18, opacity: 1
-        }).addTo(leafletMap);
-      }
-
-      // Clear existing layers
-      leafletMap.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) leafletMap.removeLayer(l); });
-
-      // Add markers and route
-      const pts = [];
-      let num = 0;
-      d.stops.forEach(s => {
-        if (s.lat) {
-          num++;
-          const col = d.color;
-          const icon = L.divIcon({
-            html: `<div style="width:30px;height:30px;border-radius:50%;background:${col};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.5)">${s.icon}</div>`,
-            className: '',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15],
-            popupAnchor: [0, -18]
-          });
-          const marker = L.marker([s.lat, s.lng], { icon }).addTo(leafletMap);
-          const popupContent = `<div class="lf-popup-name">${s.icon} ${s.name}</div>
-            <div class="lf-popup-time">${s.meta}</div>
-            ${s.naver ? `<a class="lf-popup-btn" href="${s.naver}" target="_blank">↗ Odpri Naver Maps</a>` : ''}`;
-          marker.bindPopup(popupContent, { maxWidth: 220 });
-          pts.push([s.lat, s.lng]);
-        }
-      });
-
-      // Draw route line
-      if (pts.length > 1) {
-        L.polyline(pts, { color: d.color, weight: 3, opacity: 0.7, dashArray: '6,4' }).addTo(leafletMap);
-      }
-
-      // Fit map to bounds
-      if (pts.length) {
-        leafletMap.fitBounds(pts, { padding: [30, 30] });
-      }
-    }
-
-    function focusStop(lat, lng, name, meta, naver) {
-      if (!leafletMap || !lat) return;
-      leafletMap.setView([lat, lng], 16, { animate: true });
-      // scroll to map
-      document.getElementById('leaflet-map').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     // ─── LANGUAGE SWITCHER ───
